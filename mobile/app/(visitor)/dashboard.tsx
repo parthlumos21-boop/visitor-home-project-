@@ -1,0 +1,109 @@
+import React from 'react';
+import { View, ScrollView, Text, TouchableOpacity, Alert } from 'react-native';
+import { ClipboardList, Clock, History, Plus } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+
+export default function VisitorDashboard() {
+  const router = useRouter();
+
+  const handleCardPress = (title: string, routeName: string) => {
+    try {
+      console.log(`Clicked on Dashboard Card: ${title}, navigating to page...`);
+      // @ts-ignore
+      router.push(`/(visitor)/${routeName}`);
+    } catch(err) {
+      console.error(`Error navigating to ${title}:`, err);
+    }
+  };
+  
+
+  return (
+    <ScrollView className="flex-1 bg-gray-50" contentContainerStyle={{ padding: 16 }}>
+      
+      {/* Top Action Bar with spacing for responsive layout */}
+      <View className="flex-row justify-end mt-16 mb-5">
+        <TouchableOpacity 
+          onPress={() => {
+            console.log("Navigating to new registration...");
+            router.push('/(visitor)/new-registration');
+          }}
+          className="bg-blue-600 px-5 py-3 rounded-xl shadow-sm flex-row items-center"
+        >
+          <Plus color="#ffffff" size={18} className="mr-2" />
+          <Text className="text-white font-bold text-sm">New Appointment</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Welcome Card */}
+      <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+        <Text className="text-xl font-bold text-gray-900 mb-2">Welcome, John 👋</Text>
+        <Text className="text-sm font-semibold text-gray-800 mb-1">Your Visitor Dashboard</Text>
+        <Text className="text-xs text-gray-500">Manage your appointments.</Text>
+      </View>
+      
+      {/* Section Title */}
+      <Text className="text-gray-500 font-bold mb-4 ml-1 mt-8">YOUR VISIT OVERVIEW</Text>
+
+      {/* TOTAL VISITS */}
+      <TouchableOpacity 
+        onPress={() => handleCardPress('Total Visits', 'total-visits')} 
+        className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 active:opacity-70 flex-row items-center justify-between"
+      >
+        <View className="flex-row items-center flex-1">
+          <View className="bg-blue-50 p-3 rounded-full mr-4">
+            <ClipboardList color="#3b82f6" size={24} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-gray-900 font-bold mb-1">TOTAL VISITS</Text>
+            <Text className="text-gray-500 text-xs">View all your visits</Text>
+          </View>
+        </View>
+        <View className="flex-row items-center">
+          <Text className="text-xl font-bold text-gray-900 mr-2">06</Text>
+          <Text className="text-gray-400 font-bold text-lg">→</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* APPOINTMENT REQUESTS */}
+      <TouchableOpacity 
+        onPress={() => handleCardPress('Appointment Requests', 'appointment-requests')} 
+        className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 active:opacity-70 flex-row items-center justify-between"
+      >
+        <View className="flex-row items-center flex-1">
+          <View className="bg-amber-50 p-3 rounded-full mr-4">
+            <Clock color="#f59e0b" size={24} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-gray-900 font-bold mb-1">APPOINTMENT REQUESTS</Text>
+            <Text className="text-gray-500 text-xs">Waiting for confirmation</Text>
+          </View>
+        </View>
+        <View className="flex-row items-center">
+          <Text className="text-xl font-bold text-gray-900 mr-2">02</Text>
+          <Text className="text-gray-400 font-bold text-lg">→</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* VISIT HISTORY */}
+      <TouchableOpacity 
+        onPress={() => handleCardPress('Visit History', 'visit-history')} 
+        className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 active:opacity-70 flex-row items-center justify-between"
+      >
+        <View className="flex-row items-center flex-1">
+          <View className="bg-emerald-50 p-3 rounded-full mr-4">
+            <History color="#10b981" size={24} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-gray-900 font-bold mb-1">VISIT HISTORY</Text>
+            <Text className="text-gray-500 text-xs">View your previous visits</Text>
+          </View>
+        </View>
+        <View className="flex-row items-center">
+          <Text className="text-sm font-bold text-blue-600 mr-2">VIEW ALL</Text>
+          <Text className="text-gray-400 font-bold text-lg">→</Text>
+        </View>
+      </TouchableOpacity>
+
+    </ScrollView>
+  );
+}

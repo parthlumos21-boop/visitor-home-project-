@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  phone         String?   @unique
+  email         String    @unique
+  passwordHash  String
+  role          Role      
+  status        String    @default("ACTIVE")
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  visitsHosted  Visit[]   @relation("HostVisits")
+}
+
+model VisitorProfile {
+  id          String   @id @default(uuid())
+  name        String
+  phone       String
+  email       String?
+  photoUrl    String?
+  idType      String?
+  idNumber    String?
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  visits      Visit[]
+}
+
+model Visit {
+  id          String    @id @default(uuid())
+  displayId   String?   @unique
+  visitorId   String
+  hostId      String
+  createdBy   String?   
+  purpose     String
+  scheduledAt DateTime
+  status      VisitStatus 
+  checkInAt   DateTime?
+  checkOutAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  visitor     VisitorProfile @relation(fields: [visitorId], references: [id])
+  host        User           @relation("HostVisits", fields: [hostId], references: [id])
+  qrCode      QrCode?
+}
+
+model QrCode {
+  id        String    @id @default(uuid())
+  visitId   String    @unique
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  
+  // Relations
+  visit     Visit     @relation(fields: [visitId], references: [id])
+}
+
+enum Role {
+  SUPER_ADMIN
+  SECURITY
+  RECEPTIONIST
+  EMPLOYEE
+  VISITOR
+}
+
+enum VisitStatus {
+  PENDING
+  APPROVED
+  CHECKED_IN
+  COMPLETED
+  REJECTED
+}

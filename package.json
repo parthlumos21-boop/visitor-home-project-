@@ -1,0 +1,30 @@
+{
+  "name": "visitor-system",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "mobile"
+  ],
+  "scripts": {
+    "start": "npm run start:mobile",
+    "dev": "concurrently --raw \"npm run dev:backend\" \"npm run start:mobile:clean\"",
+    "dev:backend": "npm --workspace=backend run dev",
+    "start:mobile": "cd mobile && npm run start",
+    "start:mobile:tunnel": "cd mobile && npx expo start -c --tunnel",
+    "start:mobile:clean": "npx cross-env CI=true npm --workspace=mobile run start -- -c",
+    "dev:frontend": "npm --workspace=frontend run dev"
+  },
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "dependencies": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
