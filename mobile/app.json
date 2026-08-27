@@ -18,13 +18,37 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "usesCleartextTraffic": true,
       "package": "com.anonymous.mobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "@react-native-community/datetimepicker"
-    ]
+      "@react-native-community/datetimepicker",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#81D4FA"
+        }
+      ],
+      "./plugins/withCustomNotificationLayoutAndroid.js",
+      "./plugins/withNotificationContentExtensionIOS.js"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9e344794-0675-4daf-8403-ae73e38f0ad3"
+      }
+    },
+    "owner": "parthlumos21"
   }
 }

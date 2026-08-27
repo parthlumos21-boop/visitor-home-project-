@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Modal, FlatList, Platform } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Modal, FlatList, Platform, Alert, ActivityIndicator } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { ChevronDown, X, Calendar } from 'lucide-react-native';
+import { createNewAppointment } from '../../services/appointments';
 
 const SelectField = ({ label, value, options, onSelect }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -73,6 +74,7 @@ const InputField = ({ label, placeholder, optional = false, style, icon, onIconP
 export default function NewRegistrationScreen() {
   const router = useRouter();
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     fullName: '', mobile: '', email: '', company: '',
@@ -83,6 +85,29 @@ export default function NewRegistrationScreen() {
     })(),
     arrivalTime: '', vehicleNumber: '', notes: ''
   });
+
+  const handleRegister = async () => {
+    if (!form.fullName.trim() || !form.mobile.trim() || !form.purpose.trim() || !form.personToMeet.trim() || !form.visitDate.trim()) {
+      Alert.alert('Missing Details', 'Please fill full name, mobile number, purpose, person to meet, and visit date.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const appointment = await createNewAppointment(form);
+      router.push({
+        pathname: '/(visitor)/appointment',
+        params: {
+          ...form,
+          appointmentId: appointment.appointmentId,
+        },
+      });
+    } catch (error) {
+      Alert.alert('Server Error', 'Unable to save appointment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <ScrollView className="flex-1 bg-white px-4 pt-6">
@@ -148,10 +173,15 @@ export default function NewRegistrationScreen() {
       />
 
       <TouchableOpacity 
-        onPress={() => router.push({ pathname: '/(visitor)/appointment', params: form })}
-        className="bg-blue-600 p-4 rounded-xl items-center mt-6 mb-12 shadow-sm"
+        onPress={handleRegister}
+        disabled={isSubmitting}
+        className={`bg-blue-600 p-4 rounded-xl items-center mt-6 mb-12 shadow-sm ${isSubmitting ? 'opacity-70' : ''}`}
       >
-        <Text className="text-white font-bold text-lg tracking-wider">REGISTER VISITOR</Text>
+        {isSubmitting ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text className="text-white font-bold text-lg tracking-wider">REGISTER VISITOR</Text>
+        )}
       </TouchableOpacity>
 
     </ScrollView>

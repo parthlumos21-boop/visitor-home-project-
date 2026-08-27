@@ -73,7 +73,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       
       if (token && userStr) {
         const user = JSON.parse(userStr);
-        set({ user, token, isLoading: false });
+        // Clean token of any potential quotes or whitespace
+        const cleanToken = token.replace(/^"|"$/g, '').trim();
+        set({ user, token: cleanToken, isLoading: false });
         return;
       }
     } catch (error) {

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../app';
-import { VisitStatus } from '@prisma/client';
+import { VisitStatus, Role } from '@prisma/client';
+import { NotificationService } from '../services/notification.service';
 
 export const getVisitors = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -40,6 +41,85 @@ export const createVisitorRequest = async (req: Request, res: Response): Promise
     res.status(201).json(visit);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create request' });
+  }
+};
+
+export const checkVisitor = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { phone, email } = req.body;
+    if (!phone && !email) {
+      res.status(400).json({ error: 'Phone or email is required' });
+      return;
+    }
+
+    const visitors = await prisma.visitorProfile.findMany({
+      where: {
+        OR: [
+          ...(phone ? [{ phone }] : []),
+          ...(email ? [{ email }] : [])
+        ]
+      }
+    });
+
+    res.json({ exists: visitors.length > 0, visitors });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check visitor' });
+  }
+};
+
+export const createVisitor = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name, phone, email, photoUrl, idType, idNumber } = req.body;
+    
+    if (!name || !phone) {
+      res.status(400).json({ error: 'Name and phone are required' });
+      return;
+    }
+
+    const existing = await prisma.visitorProfile.findFirst({
+      where: {
+        OR: [
+          { phone },
+          ...(email ? [{ email }] : [])
+        ]
+      }
+    });
+
+    if (existing) {
+      res.status(400).json({ error: 'Visitor already exists', visitor: existing });
+      return;
+    }
+
+    const visitor = await prisma.visitorProfile.create({
+      data: { name, phone, email, photoUrl, idType, idNumber }
+    });
+
+    // Find all users who should receive this notification
+    const targetUsers = await prisma.user.findMany({
+      where: {
+        role: {
+          in: ['SUPER_ADMIN', 'EMPLOYEE', 'RECEPTIONIST']
+        }
+      },
+      select: { id: true, role: true }
+    });
+
+    if (targetUsers.length > 0) {
+      for (const u of targetUsers) {
+        await NotificationService.sendNotification({
+          type: 'NEW_VISITOR',
+          title: 'New Visitor Added',
+          message: `${name} was added to the system. Mobile: ${phone}`,
+          visitorId: visitor.id,
+          recipientId: u.id,
+          recipientRole: u.role,
+        });
+      }
+    }
+
+    res.status(201).json(visitor);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create visitor' });
   }
 };
 

@@ -1,0 +1,24 @@
+
+> visitor-system@1.0.0 dev
+> node tools/start-stack.js
+
+LAN IP: 192.168.10.161
+Mobile API: http://192.168.10.161:5001/api
+Backend ready: http://192.168.10.161:5001/
+
+> backend@1.0.0 dev
+> tsx watch src/app.ts
+
+
+> mobile@1.0.0 start
+> powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-expo-8082.ps1 -c
+
+◇ injected env (2) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+[server]: Server is running at http://0.0.0.0:5001
+Expo host: 192.168.10.161
+Mobile API: http://192.168.10.161:5001/api
+Backend LAN check: 200
+ADB not found. Android device must reach the LAN API above.
+Starting project at D:\visitor-home-project--main\mobile
+› Port 8082 is being used by another process
+› Skipping dev server

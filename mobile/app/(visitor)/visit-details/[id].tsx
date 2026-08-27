@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, MapPin, Calendar as CalendarIcon, Clock, Handshake, Building2, User as UserIcon, Phone } from 'lucide-react-native';
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001/api';
+import api from '../../../services/api';
 
 export default function VisitDetails() {
   const { id } = useLocalSearchParams();
@@ -21,12 +20,9 @@ export default function VisitDetails() {
     try {
       // Fetch all and filter for simplicity, or ideally have a GET /visitors/:id endpoint
       // We will fetch all and find the matching one since we know /visitors returns all.
-      const res = await fetch(`${API_URL}/visitors`);
-      if (res.ok) {
-        const data = await res.json();
-        const found = data.find((v: any) => v.id === id);
-        setVisit(found);
-      }
+      const response = await api.get('/visitors');
+      const found = response.data.find((v: any) => v.id === id);
+      setVisit(found);
     } catch (err) {
       console.error("Error fetching visit details:", err);
     } finally {

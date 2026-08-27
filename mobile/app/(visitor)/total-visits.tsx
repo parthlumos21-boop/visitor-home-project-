@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Search, Calendar, Clock, Handshake, Building2, User as UserIcon } from 'lucide-react-native';
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001/api';
+import api from '../../services/api';
 
 export default function TotalVisits() {
   const router = useRouter();
@@ -16,14 +15,8 @@ export default function TotalVisits() {
 
   const fetchVisits = async () => {
     try {
-      console.log("Fetching visits from:", `${API_URL}/visitors`);
-      const res = await fetch(`${API_URL}/visitors`);
-      if (res.ok) {
-        const data = await res.json();
-        setVisits(data);
-      } else {
-        console.error("Failed to fetch visits:", res.status);
-      }
+      const response = await api.get('/visitors');
+      setVisits(response.data);
     } catch (err) {
       console.error("Error fetching visits. Ensure backend is running:", err);
     } finally {

@@ -2,10 +2,28 @@ import { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { NetworkProvider } from '../store/NetworkContext';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text } from 'react-native';
+import Toast, { ToastConfig, ToastConfigParams } from 'react-native-toast-message';
+import { Bell } from 'lucide-react-native';
+
+import { NotificationProvider } from '../context/NotificationContext';
 
 // @ts-ignore
 import '../global.css';
+
+const toastConfig: ToastConfig = {
+  instagram: ({ text1, text2, props }: ToastConfigParams<any>) => (
+    <View className="flex-row items-center bg-gray-900 rounded-full px-4 py-3 mx-4 shadow-lg w-[92%] mt-2">
+      <View className="h-10 w-10 rounded-full bg-gray-800 items-center justify-center mr-3 border border-gray-700">
+        <Bell color="#3b82f6" size={20} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-white font-bold text-sm" numberOfLines={1}>{text1}</Text>
+        <Text className="text-gray-300 text-xs mt-0.5" numberOfLines={2}>{text2}</Text>
+      </View>
+    </View>
+  )
+};
 
 export default function RootLayout() {
   const { user, token, isLoading, initializeAuth } = useAuthStore();
@@ -54,7 +72,10 @@ export default function RootLayout() {
 
   return (
     <NetworkProvider>
-      <Slot />
+      <NotificationProvider>
+        <Slot />
+        <Toast config={toastConfig} />
+      </NotificationProvider>
     </NetworkProvider>
   );
 }

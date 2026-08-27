@@ -1,0 +1,25 @@
+import api from './api';
+
+export interface AdminDashboardStats {
+  totalVisits: number;
+  pendingApprovals: number;
+  currentlyInside: number;
+  appointmentsToday: number;
+  adminName: string;
+}
+
+export interface AdminEmployee {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export const getAdminDashboard = async (): Promise<AdminDashboardStats> => {
+  const response = await api.get('/admin/dashboard');
+  return response.data;
+};
+
+export const getAdminEmployees = async (): Promise<AdminEmployee[]> => {
+  const response = await api.get('/admin/employees');
+  return response.data;
+};

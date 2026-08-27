@@ -18,6 +18,7 @@ model User {
   
   // Relations
   visitsHosted  Visit[]   @relation("HostVisits")
+  pushTokens    PushToken[]
 }
 
 model VisitorProfile {
@@ -32,6 +33,9 @@ model VisitorProfile {
   
   // Relations
   visits      Visit[]
+
+  @@index([phone])
+  @@index([email])
 }
 
 model Visit {
@@ -63,6 +67,82 @@ model QrCode {
   // Relations
   visit     Visit     @relation(fields: [visitId], references: [id])
 }
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  event     String
+  screen    String?
+  action    String?
+  method    String?
+  url       String?
+  status    String?
+  message   String?
+  userEmail String?
+  userRole  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model NewAppointment {
+  id            String   @id @default(uuid())
+  appointmentId String  @unique
+  fullName      String
+  mobile        String
+  email         String?
+  company       String?
+  visitorType   String?
+  purpose       String
+  personToMeet  String
+  department    String?
+  visitDate     String
+  arrivalTime   String?
+  vehicleNumber String?
+  notes         String?
+  status        String   @default("REGISTERED")
+  rejectionReason String?
+  decidedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([mobile])
+  @@index([status])
+}
+
+model Notification {
+  id            String   @id @default(uuid())
+  recipientId   String?  
+  recipientRole String?  
+  type          String   
+  title         String
+  message       String
+  visitorId     String?
+  visitId       String?
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([recipientId])
+  @@index([recipientRole])
+  @@index([createdAt])
+}
+
+model PushToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  platform  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
 
 enum Role {
   SUPER_ADMIN

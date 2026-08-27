@@ -18,6 +18,7 @@ export default function VisitorAppointments() {
   const purpose = params.purpose || 'No Purpose Provided';
   const personToMeet = params.personToMeet || 'No Person Provided';
   const department = params.department || 'No Department Provided';
+  const appointmentId = params.appointmentId || 'APT-000000';
 
   return (
     <ScrollView className="flex-1 bg-gray-50 px-4 pt-6">
@@ -32,7 +33,7 @@ export default function VisitorAppointments() {
         {/* Content */}
         <View className="p-5">
           <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-lg font-bold text-gray-900">VIS-000125</Text>
+            <Text className="text-lg font-bold text-gray-900">{appointmentId}</Text>
             <View className="bg-green-100 px-3 py-1 rounded-full">
               <Text className="text-green-800 font-semibold text-xs tracking-wider">REGISTERED</Text>
             </View>

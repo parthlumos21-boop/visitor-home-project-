@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Clock, Handshake, User as UserIcon } from 'lucide-react-native';
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001/api';
+import api from '../../services/api';
 
 export default function AppointmentRequests() {
   const router = useRouter();
@@ -16,12 +15,9 @@ export default function AppointmentRequests() {
 
   const fetchVisits = async () => {
     try {
-      const res = await fetch(`${API_URL}/visitors`);
-      if (res.ok) {
-        const data = await res.json();
-        // Filter for requests (e.g. pending/confirmed) if needed, currently showing all
-        setVisits(data);
-      }
+      const response = await api.get('/visitors');
+      // Filter for requests (e.g. pending/confirmed) if needed, currently showing all
+      setVisits(response.data);
     } catch (err) {
       console.error("Error fetching visits:", err);
     } finally {
