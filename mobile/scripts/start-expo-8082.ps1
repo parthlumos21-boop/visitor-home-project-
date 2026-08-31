@@ -76,4 +76,4 @@ if ($adb) {
   Write-Host "ADB not found. Android device must reach the LAN API above."
 }
 
-npx expo start --port $port $ExtraArgs
+npx expo start --port $port --host lan $ExtraArgs
