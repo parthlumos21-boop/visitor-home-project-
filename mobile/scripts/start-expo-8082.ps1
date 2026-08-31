@@ -66,6 +66,7 @@ if ($adb) {
   try {
     adb reverse tcp:5001 tcp:5001 | Out-Null
     adb reverse tcp:$port tcp:$port | Out-Null
+    adb reverse tcp:8081 tcp:$port | Out-Null
     Write-Host "Android USB API: http://localhost:5001/api"
     Write-Host "Android USB Metro: http://localhost:$port"
   } catch {
