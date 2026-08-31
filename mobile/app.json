@@ -3,6 +3,9 @@
     "name": "Visitor Management",
     "slug": "mobile",
     "version": "1.0.0",
+    "packagerOpts": {
+      "port": 8082
+    },
     "scheme": "visitor-gate",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
