@@ -32,7 +32,7 @@ export async function registerForPushNotificationsAsync() {
       finalStatus = status;
     }
     if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for push notification!');
+      // Permission denied or disabled in settings
       return null;
     }
     

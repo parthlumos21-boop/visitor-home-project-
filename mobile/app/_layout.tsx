@@ -13,14 +13,18 @@ import '../global.css';
 
 const toastConfig: ToastConfig = {
   instagram: ({ text1, text2, props }: ToastConfigParams<any>) => (
-    <View className="flex-row items-center bg-gray-900 rounded-full px-4 py-3 mx-4 shadow-lg w-[92%] mt-2">
-      <View className="h-10 w-10 rounded-full bg-gray-800 items-center justify-center mr-3 border border-gray-700">
-        <Bell color="#3b82f6" size={20} />
+    <View className="bg-white rounded-2xl mx-4 p-4 shadow-lg w-[92%] mt-2 border border-gray-100">
+      <View className="flex-row items-center justify-between mb-2">
+        <View className="flex-row items-center">
+          <View className="h-6 w-6 rounded-full bg-blue-600 items-center justify-center mr-2">
+            <Text className="text-white text-xs font-bold">C</Text>
+          </View>
+          <Text className="text-gray-500 font-semibold text-xs tracking-wider">COLLAB.IO DEMO</Text>
+        </View>
+        <Text className="text-gray-400 text-xs">now</Text>
       </View>
-      <View className="flex-1">
-        <Text className="text-white font-bold text-sm" numberOfLines={1}>{text1}</Text>
-        <Text className="text-gray-300 text-xs mt-0.5" numberOfLines={2}>{text2}</Text>
-      </View>
+      <Text className="text-black font-bold text-[15px] mb-1" numberOfLines={1}>{text1}</Text>
+      <Text className="text-gray-700 text-sm leading-5" numberOfLines={3}>{text2}</Text>
     </View>
   )
 };

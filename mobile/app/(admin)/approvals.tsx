@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { CalendarDays, Check, Clock, Eye, Hourglass, User, X, ChevronRight } from 'lucide-react-native';
+import { useLocalSearchParams } from 'expo-router';
 import {
   approveNewAppointment,
   getNewAppointments,
@@ -64,6 +65,8 @@ export default function ApprovalsScreen() {
   const [rejectReason, setRejectReason] = useState('');
   const [detailsTarget, setDetailsTarget] = useState<NewAppointment | null>(null);
 
+  const params = useLocalSearchParams<{ appointmentId?: string }>();
+
   const loadAppointments = useCallback(async () => {
     try {
       setLoading(true);
@@ -90,6 +93,21 @@ export default function ApprovalsScreen() {
   useEffect(() => {
     loadAppointments();
   }, [loadAppointments]);
+
+  // Deep linking support: auto-open details if appointmentId is passed
+  useEffect(() => {
+    if (params.appointmentId && appointments.length > 0 && !detailsTarget && !rejectTarget) {
+      const target = appointments.find((a) => a.appointmentId === params.appointmentId);
+      if (target) {
+        setDetailsTarget(target);
+        if (target.status === 'APPROVED') {
+          setActiveTab('APPROVED');
+        } else {
+          setActiveTab('PENDING');
+        }
+      }
+    }
+  }, [params.appointmentId, appointments]);
 
   const updateAppointmentStatus = (id: string, newStatus: string) => {
     setAppointments((current) =>

@@ -120,6 +120,8 @@ model Notification {
   message       String
   visitorId     String?
   visitId       String?
+  targetScreen  String?
+  data          Json?
   isRead        Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

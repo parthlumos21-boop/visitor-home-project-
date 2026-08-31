@@ -14,12 +14,13 @@ export default function NotificationScreen() {
     }
     
     // Attempt to route based on type
-    if (notification.type.includes('APPOINTMENT')) {
-      // In this system, appointments are handled mostly in approvals screen for admins, or profile/visits for employees.
-      // For simplicity, we navigate to the root dashboard or a specific screen.
-      // A full production app would have deep links here based on the user's role.
-      // The user wants it to just route to the relevant screen. Let's just go back for now, 
-      // or to the dashboard since we don't have all deep links mapped yet.
+    if (notification.targetScreen === 'Approval' && notification.data?.appointmentId) {
+      router.push(`/(admin)/approvals?appointmentId=${notification.data.appointmentId}`);
+    } else if (notification.targetScreen === 'VisitDetails' && notification.data?.visitId) {
+      router.push(`/(admin)/visitors`);
+    } else if (notification.targetScreen === 'VisitDetails' && notification.data?.appointmentId) {
+      // For visitors viewing their approved/rejected appt
+      // In a full app, we would have a specific visitor route
       router.back();
     } else {
       router.back();

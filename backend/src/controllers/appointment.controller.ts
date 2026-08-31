@@ -58,27 +58,8 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
       createdAt: appointment.createdAt,
     }));
 
-    // Find all users who should receive this notification
-    const targetUsers = await prisma.user.findMany({
-      where: {
-        role: {
-          in: ['SUPER_ADMIN', 'EMPLOYEE', 'RECEPTIONIST']
-        }
-      },
-      select: { id: true, role: true }
-    });
-
-    if (targetUsers.length > 0) {
-      for (const u of targetUsers) {
-        await NotificationService.sendNotification({
-          type: 'NEW_APPOINTMENT_REQUEST',
-          title: 'New Appointment Request',
-          message: `${appointment.fullName} requested an appointment to meet ${appointment.personToMeet}.`,
-          recipientId: u.id,
-          recipientRole: u.role,
-        });
-      }
-    }
+    // Send notification strictly to Admin (Keval V Shah) via Dispatcher
+    await NotificationService.notifyAdminOfNewAppointment(appointment);
 
     res.status(201).json(appointment);
   } catch (error) {
@@ -112,22 +93,11 @@ export const approveNewAppointment = async (req: Request, res: Response): Promis
       },
     });
 
-    // Notify admins, receptionists, and the employee
-    const targetUsers = await prisma.user.findMany({
-      where: { role: { in: ['SUPER_ADMIN', 'EMPLOYEE', 'RECEPTIONIST'] } },
-      select: { id: true, role: true }
-    });
+    // Notify the specific Employee (personToMeet) via Dispatcher
+    await NotificationService.notifyHostOfAppointmentApproval(appointment);
 
-    for (const u of targetUsers) {
-      await NotificationService.sendNotification({
-        type: 'APPOINTMENT_APPROVED',
-        title: 'Appointment Approved',
-        message: `${appointment.fullName}'s appointment for ${appointment.visitDate} has been approved.`,
-        visitorId: appointment.appointmentId,
-        recipientId: u.id,
-        recipientRole: u.role,
-      });
-    }
+    // Notify the Visitor via Dispatcher
+    await NotificationService.notifyVisitorOfApproval(appointment);
 
     console.log('[New Appointment Approved]', JSON.stringify({
       appointmentId: appointment.appointmentId,
@@ -162,22 +132,25 @@ export const rejectNewAppointment = async (req: Request, res: Response): Promise
       },
     });
 
-    // Notify admins, receptionists, and the employee
-    const targetUsers = await prisma.user.findMany({
-      where: { role: { in: ['SUPER_ADMIN', 'EMPLOYEE', 'RECEPTIONIST'] } },
+    // Notify the specific Employee (personToMeet)
+    const employeeUser = await prisma.user.findFirst({
+      where: { name: appointment.personToMeet, role: 'EMPLOYEE' },
       select: { id: true, role: true }
     });
 
-    for (const u of targetUsers) {
+    if (employeeUser) {
       await NotificationService.sendNotification({
         type: 'APPOINTMENT_REJECTED',
         title: 'Appointment Rejected',
         message: `${appointment.fullName}'s appointment has been rejected.`,
         visitorId: appointment.appointmentId,
-        recipientId: u.id,
-        recipientRole: u.role,
+        recipientId: employeeUser.id,
+        recipientRole: employeeUser.role,
       });
     }
+
+    // Notify the Visitor
+    await NotificationService.notifyVisitorOfRejection(appointment);
 
     console.log('[New Appointment Rejected]', JSON.stringify({
       appointmentId: appointment.appointmentId,

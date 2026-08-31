@@ -2,6 +2,33 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import io, { Socket } from 'socket.io-client';
 import Toast from 'react-native-toast-message';
+import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
+
+const isExpoGo = Constants.appOwnership === 'expo';
+
+let useLastNotificationResponse: any = () => null;
+if (!isExpoGo && Platform.OS !== 'web') {
+  try {
+    const Notifications = require('expo-notifications');
+    useLastNotificationResponse = Notifications.useLastNotificationResponse;
+  } catch (e) {}
+}
+
+// Configure foreground notification behavior: play system sound, but hide native alert (since we use custom Toast)
+if (!isExpoGo && Platform.OS !== 'web') {
+  import('expo-notifications').then((Notifications) => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  }).catch(e => console.log('Could not load expo-notifications', e));
+}
 
 import { useAuthStore } from '../store/authStore';
 import { registerForPushNotificationsAsync } from '../services/push';
@@ -14,6 +41,8 @@ interface NotificationItem {
   message: string;
   visitorId?: string;
   visitId?: string;
+  targetScreen?: string;
+  data?: any;
   isRead: boolean;
   createdAt: string;
 }
@@ -37,6 +66,35 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const router = useRouter();
+  const lastNotificationResponse = useLastNotificationResponse();
+
+  // Handle deep linking from push notifications
+  useEffect(() => {
+    if (lastNotificationResponse && user && token) {
+      const data = lastNotificationResponse.notification.request.content.data;
+      
+      // If we have a targetScreen and identifier, navigate!
+      if (data?.targetScreen === 'Approval' && data?.appointmentId) {
+        // Give time for UI to settle
+        setTimeout(() => {
+          router.push(`/(admin)/approvals?appointmentId=${data.appointmentId}`);
+        }, 100);
+      } else if (data?.targetScreen === 'VisitDetails' && data?.visitId) {
+        setTimeout(() => {
+          router.push(`/(admin)/visitors`); // Assuming visitors handles visitId similar to approvals
+        }, 100);
+      } else if (data?.targetScreen === 'VisitDetails' && data?.appointmentId) {
+         // Visitor viewing their appointment
+         // Assuming visitor app handles appointment deep links
+      }
+
+      // Mark this notification as read in backend if we have notificationId
+      if (data?.notificationId) {
+        markAsRead(String(data.notificationId)).catch(console.error);
+      }
+    }
+  }, [lastNotificationResponse, user, token]);
 
   const fetchNotifications = async () => {
     if (!token) return;
@@ -88,13 +146,30 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       newSocket.on('connect', () => console.log('Socket connected'));
       
-      const handleNewNotification = (newNotif: NotificationItem) => {
+      const handleNewNotification = async (newNotif: NotificationItem) => {
         setNotifications((prev) => {
           // Prevent duplicates if backend accidentally emits multiple
           if (prev.find(n => n.id === newNotif.id)) return prev;
           return [newNotif, ...prev];
         });
         setUnreadCount((prev) => prev + 1);
+
+        // Trigger native system sound (invisible local notification since shouldShowAlert is false)
+        try {
+          if (Platform.OS !== 'web' && !isExpoGo) {
+            const Notifications = await import('expo-notifications');
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: newNotif.title,
+                body: newNotif.message,
+                sound: true,
+              },
+              trigger: null,
+            });
+          }
+        } catch (err) {
+          console.log('Could not trigger system sound', err);
+        }
 
         // Display Instagram-style in-app toast notification
         Toast.show({

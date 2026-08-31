@@ -94,27 +94,21 @@ export const createVisitor = async (req: Request, res: Response): Promise<void> 
       data: { name, phone, email, photoUrl, idType, idNumber }
     });
 
-    // Find all users who should receive this notification
-    const targetUsers = await prisma.user.findMany({
-      where: {
-        role: {
-          in: ['SUPER_ADMIN', 'EMPLOYEE', 'RECEPTIONIST']
-        }
-      },
+    // Find Admin user
+    const adminUser = await prisma.user.findUnique({
+      where: { email: 'keval@swatiswitchgears.com' },
       select: { id: true, role: true }
     });
 
-    if (targetUsers.length > 0) {
-      for (const u of targetUsers) {
-        await NotificationService.sendNotification({
-          type: 'NEW_VISITOR',
-          title: 'New Visitor Added',
-          message: `${name} was added to the system. Mobile: ${phone}`,
-          visitorId: visitor.id,
-          recipientId: u.id,
-          recipientRole: u.role,
-        });
-      }
+    if (adminUser) {
+      await NotificationService.sendNotification({
+        type: 'NEW_VISITOR',
+        title: 'New Visitor Added',
+        message: `${name} was added to the system. Mobile: ${phone}`,
+        visitorId: visitor.id,
+        recipientId: adminUser.id,
+        recipientRole: adminUser.role,
+      });
     }
 
     res.status(201).json(visitor);
@@ -129,8 +123,19 @@ export const updateVisitStatus = async (req: Request, res: Response): Promise<vo
     const { status } = req.body;
     const visit = await prisma.visit.update({
       where: { id },
-      data: { status }
+      data: { status },
+      include: {
+        host: true,
+        visitor: true
+      }
     });
+
+    if (status === 'CHECKED_IN') {
+      // Notify Admin and Host via Dispatcher
+      await NotificationService.notifyAdminOfVisitorArrival(visit);
+      await NotificationService.notifyHostOfVisitorArrival(visit);
+    }
+
     res.json(visit);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update status' });
