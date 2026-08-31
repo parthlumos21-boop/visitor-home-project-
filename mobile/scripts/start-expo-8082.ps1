@@ -76,4 +76,19 @@ if ($adb) {
   Write-Host "ADB not found. Android device must reach the LAN API above."
 }
 
+$firewallRule = Get-NetFirewallRule -LocalPort $port -ErrorAction SilentlyContinue
+if (-not $firewallRule) {
+    Write-Host ""
+    Write-Host "================================================================" -ForegroundColor Yellow
+    Write-Host "WARNING: Windows Firewall is likely blocking port $port!" -ForegroundColor Yellow
+    Write-Host "If your phone cannot connect (Unable to load script), you MUST" -ForegroundColor Yellow
+    Write-Host "run this exact command in an Administrator PowerShell window:" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "New-NetFirewallRule -DisplayName `"Expo Server`" -Direction Inbound -LocalPort $port -Protocol TCP -Action Allow" -ForegroundColor Cyan
+    Write-Host "================================================================" -ForegroundColor Yellow
+    Write-Host ""
+} else {
+    Write-Host "Firewall check: OK (Port $port allowed)" -ForegroundColor Green
+}
+
 npx expo start --port $port --host lan $ExtraArgs
