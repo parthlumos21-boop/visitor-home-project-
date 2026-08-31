@@ -23,3 +23,5 @@ backend/dist/
 frontend/.next/
 mobile/web-build/
 mobile/.expo/
+mobile/android/
+mobile/ios/
