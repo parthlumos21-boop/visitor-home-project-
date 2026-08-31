@@ -1,0 +1,25 @@
+# Git
+.git/
+
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Source code of other workspaces (to save upload size)
+backend/src/
+frontend/src/
+frontend/public/
+frontend/app/
+frontend/components/
+
+# Local env files
+.env*.local
+
+# Dist / build folders
+dist/
+build/
+backend/dist/
+frontend/.next/
+mobile/web-build/
+mobile/.expo/
