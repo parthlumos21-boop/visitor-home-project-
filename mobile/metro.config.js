@@ -13,4 +13,7 @@ config.resolver.blockList = [
 const path = require('path');
 config.watchFolders = [__dirname, path.resolve(__dirname, '../node_modules')];
 
-module.exports = withNativeWind(config, { input: "./global.css" });
+module.exports = withNativeWind(config, { 
+  input: path.resolve(__dirname, "./global.css"),
+  projectRoot: __dirname
+});

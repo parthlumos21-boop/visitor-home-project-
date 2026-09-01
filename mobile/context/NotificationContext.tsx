@@ -8,15 +8,15 @@ import { useRouter } from 'expo-router';
 const isExpoGo = Constants.appOwnership === 'expo';
 
 let useLastNotificationResponse: any = () => null;
-if (!isExpoGo && Platform.OS !== 'web') {
+if (Platform.OS !== 'web') {
   try {
     const Notifications = require('expo-notifications');
     useLastNotificationResponse = Notifications.useLastNotificationResponse;
   } catch (e) {}
 }
 
-// Configure foreground notification behavior: play system sound, but hide native alert (since we use custom Toast)
-if (!isExpoGo && Platform.OS !== 'web') {
+// Configure foreground notification behavior for dev/production builds and Expo Go local notifications.
+if (Platform.OS !== 'web') {
   import('expo-notifications').then((Notifications) => {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
@@ -27,6 +27,17 @@ if (!isExpoGo && Platform.OS !== 'web') {
         shouldShowList: true,
       }),
     });
+
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        sound: 'default',
+      }).catch(e => console.log('Could not configure notification channel', e));
+    }
   }).catch(e => console.log('Could not load expo-notifications', e));
 }
 
@@ -154,9 +165,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         });
         setUnreadCount((prev) => prev + 1);
 
-        // Trigger native system sound (invisible local notification since shouldShowAlert is false)
+        // Trigger native banner and system sound while the app is in the foreground.
         try {
-          if (Platform.OS !== 'web' && !isExpoGo) {
+          if (Platform.OS !== 'web') {
             const Notifications = await import('expo-notifications');
             await Notifications.scheduleNotificationAsync({
               content: {
@@ -164,7 +175,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 body: newNotif.message,
                 sound: true,
               },
-              trigger: null,
+              trigger: Platform.OS === 'android' ? { channelId: 'default' } : null,
             });
           }
         } catch (err) {
@@ -262,5 +273,3 @@ export function useNotifications() {
   }
   return context;
 }
-
-

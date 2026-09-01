@@ -9,6 +9,7 @@
       "distribution": "internal"
     },
     "preview": {
+      "developmentClient": false,
       "distribution": "internal",
       "env": {
         "NODE_OPTIONS": "--max-old-space-size=4096"

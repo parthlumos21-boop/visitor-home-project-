@@ -1,0 +1,21 @@
+
+> mobile@1.0.0 start
+> powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-expo-8082.ps1
+
+Expo host: 192.168.10.161
+Mobile API: http://192.168.10.161:5001/api
+Backend LAN check: 200
+ADB not found. Android device must reach the LAN API above.
+
+================================================================
+WARNING: Windows Firewall is likely blocking port 8082!
+If your phone cannot connect (Unable to load script), you MUST
+run this exact command in an Administrator PowerShell window:
+
+New-NetFirewallRule -DisplayName "Expo Server" -Direction Inbound -LocalPort 8082 -Protocol TCP -Action Allow
+================================================================
+
+Starting project at D:\visitor-home-project--main\mobile
+Starting Metro Bundler
+Waiting on http://localhost:8082
+Logs for your project will appear below.

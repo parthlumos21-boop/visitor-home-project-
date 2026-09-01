@@ -1,0 +1,5 @@
+
+> backend@1.0.0 dev
+> tsx watch src/app.ts
+
+◇ injected env (3) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }

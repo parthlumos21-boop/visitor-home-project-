@@ -43,8 +43,15 @@ $processIds = $connections | Select-Object -ExpandProperty OwningProcess -Unique
 
 foreach ($processId in $processIds) {
   if ($processId -and $processId -ne $PID) {
-    Write-Host "Stopping process $processId on port $port..."
-    Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+    $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+    if ($process -and $process.ProcessName -match '^(node|npm|npx|expo)$') {
+      Write-Host "Stopping process $processId on port $port..."
+      Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+    } else {
+      Write-Host "Port $port is already used by PID $processId ($($process.ProcessName)). Metro cannot start there." -ForegroundColor Red
+      Write-Host "Stop that process first, then run npm.cmd run start:mobile again." -ForegroundColor Yellow
+      exit 1
+    }
   }
 }
 
@@ -76,7 +83,7 @@ if ($adb) {
   Write-Host "ADB not found. Android device must reach the LAN API above."
 }
 
-$firewallRule = Get-NetFirewallRule -LocalPort $port -ErrorAction SilentlyContinue
+$firewallRule = Get-NetFirewallRule -DisplayName "Expo Server" -ErrorAction SilentlyContinue
 if (-not $firewallRule) {
     Write-Host ""
     Write-Host "================================================================" -ForegroundColor Yellow

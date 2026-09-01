@@ -48,7 +48,7 @@ export class NotificationService {
         visitId: payload.visitId,
         // @ts-ignore - targetScreen is in schema.prisma but Prisma client types are cached/stale
         targetScreen: payload.targetScreen,
-        data: payload.data ? payload.data : null,
+        data: payload.data ? payload.data : undefined,
       }
     });
 
@@ -75,6 +75,8 @@ export class NotificationService {
           messages.push({
             to: pt.token,
             sound: 'default',
+            priority: 'high',
+            channelId: 'default',
             title: payload.title,
             body: payload.message,
             categoryId: payload.type,
