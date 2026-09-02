@@ -6,32 +6,88 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $port = 8082
+$useExpoGo = $ExtraArgs -contains '--go'
+$useTunnel = $ExtraArgs -contains '--tunnel'
+
+$ExtraArgs = $ExtraArgs | Where-Object { $_ -ne '--tunnel' }
+
+if ($useTunnel) {
+  $expoArgs = @('expo', 'start', '--port', $port, '--tunnel')
+} else {
+  $expoArgs = @('expo', 'start', '--port', $port, '--host', 'lan')
+}
+
+if ($useExpoGo) {
+  $ExtraArgs = $ExtraArgs | Where-Object { $_ -ne '--go' }
+  $expoArgs += '--go'
+} else {
+  $expoArgs += '--dev-client'
+}
+
+$expoArgs += $ExtraArgs
+
+try {
+  $addresses = @(
+    Get-NetIPConfiguration -ErrorAction Stop |
+      Where-Object { $_.IPv4Address -and $_.NetAdapter.Status -eq 'Up' } |
+      ForEach-Object {
+        foreach ($addr in $_.IPv4Address) {
+          [PSCustomObject]@{
+            IP = $addr.IPAddress
+            Alias = $_.InterfaceAlias
+            Description = $_.NetAdapter.InterfaceDescription
+          }
+        }
+      }
+  )
+} catch {
+  $addresses = @(
+    ipconfig |
+      Select-String -Pattern 'IPv4 Address|IPv4' |
+      ForEach-Object {
+        [PSCustomObject]@{
+          IP = ($_ -split ':')[-1].Trim()
+          Alias = 'unknown'
+          Description = 'ipconfig fallback'
+        }
+      }
+  )
+}
 
 $addresses = @(
-  ipconfig |
-    Select-String -Pattern 'IPv4 Address|IPv4' |
-    ForEach-Object { ($_ -split ':')[-1].Trim() } |
+  $addresses |
     Where-Object {
-      $_ -and
-      $_ -notlike '127.*' -and
-      $_ -notlike '169.254.*' -and
-      $_ -notlike '172.17.*' -and
-      $_ -notlike '100.*'
+      $_.IP -and
+      $_.IP -notlike '127.*' -and
+      $_.IP -notlike '169.254.*' -and
+      $_.IP -notlike '172.17.*' -and
+      $_.IP -notlike '100.*'
     }
 )
 
-$wifiIp = (
+$wifiAddress = (
   $addresses |
     Where-Object {
-      $_ -like '192.168.*' -or
-      $_ -like '10.*' -or
-      $_ -match '^172\.(1[6-9]|2[0-9]|3[0-1])\.'
+      ($_.Alias -match 'wi-?fi|wlan|wireless' -or $_.Description -match 'wi-?fi|wlan|wireless') -and
+      ($_.IP -like '192.168.*' -or $_.IP -like '10.*' -or $_.IP -match '^172\.(1[6-9]|2[0-9]|3[0-1])\.')
     } |
     Select-Object -First 1
 )
 
+if ($wifiAddress) {
+  $wifiIp = $wifiAddress.IP
+} else {
+  $wifiIp = (
+    $addresses |
+      Where-Object {
+        $_.IP -like '192.168.*' -or $_.IP -like '10.*' -or $_.IP -match '^172\.(1[6-9]|2[0-9]|3[0-1])\.'
+      } |
+      Select-Object -ExpandProperty IP -First 1
+  )
+}
+
 if (-not $wifiIp) {
-  $wifiIp = $addresses | Select-Object -First 1
+  $wifiIp = $addresses | Select-Object -ExpandProperty IP -First 1
 }
 
 if (-not $wifiIp) {
@@ -55,11 +111,46 @@ foreach ($processId in $processIds) {
   }
 }
 
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = $wifiIp
+if ($useTunnel) {
+  Remove-Item Env:REACT_NATIVE_PACKAGER_HOSTNAME -ErrorAction SilentlyContinue
+} else {
+  $env:REACT_NATIVE_PACKAGER_HOSTNAME = $wifiIp
+}
 $env:EXPO_PUBLIC_API_URL = "http://$($wifiIp):5001/api"
 
+$envPath = Join-Path $PSScriptRoot '..\.env'
+Set-Content -LiteralPath $envPath -Value "EXPO_PUBLIC_API_URL=$env:EXPO_PUBLIC_API_URL"
+
+$gradlePropertiesPath = Join-Path $PSScriptRoot '..\android\gradle.properties'
+if (Test-Path -LiteralPath $gradlePropertiesPath) {
+  $gradleProperties = Get-Content -LiteralPath $gradlePropertiesPath
+  if ($gradleProperties -match '^reactNativeDevServerPort=') {
+    $gradleProperties = $gradleProperties -replace '^reactNativeDevServerPort=.*$', "reactNativeDevServerPort=$port"
+  } else {
+    $gradleProperties += ''
+    $gradleProperties += '# Keep Android dev builds aligned with this Expo start script.'
+    $gradleProperties += "reactNativeDevServerPort=$port"
+  }
+  Set-Content -LiteralPath $gradlePropertiesPath -Value $gradleProperties
+}
+
 Write-Host "Expo host: $wifiIp"
+if ($useTunnel) {
+  Write-Host "Expo connection: tunnel"
+} else {
+  Write-Host "Expo connection: LAN (QR displays without ngrok)"
+}
 Write-Host "Mobile API: $env:EXPO_PUBLIC_API_URL"
+Write-Host "Phone Metro test: http://$($wifiIp):$port"
+Write-Host ""
+
+try {
+  & (Join-Path $PSScriptRoot 'network-doctor.ps1') -MetroPort $port -ApiPort 5001
+  Write-Host ""
+} catch {
+  Write-Host "Network doctor failed: $($_.Exception.Message)" -ForegroundColor Yellow
+  Write-Host ""
+}
 
 try {
   $backendHealth = Invoke-WebRequest -Uri "http://$($wifiIp):5001/" -UseBasicParsing -TimeoutSec 3
@@ -98,4 +189,4 @@ if (-not $firewallRule) {
     Write-Host "Firewall check: OK (Port $port allowed)" -ForegroundColor Green
 }
 
-npx expo start --port $port --host lan $ExtraArgs
+npx.cmd $expoArgs

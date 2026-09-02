@@ -12,9 +12,13 @@
     "dev": "npm run dev:backend",
     "dev:all": "node tools/start-stack.js",
     "dev:backend": "npm --workspace=backend run dev",
-    "start:mobile": "npx cross-env CI=true npm --workspace=mobile run start",
-    "start:mobile:tunnel": "cd mobile && npx expo start -c --tunnel",
-    "start:mobile:clean": "npx cross-env CI=true npm --workspace=mobile run start -- -c",
+    "start:mobile": "npm --workspace=mobile run start",
+    "start:mobile:lan": "npm --workspace=mobile run start:lan",
+    "start:mobile:go": "npm --workspace=mobile run start:go",
+    "doctor:mobile-network": "npm --workspace=mobile run doctor:network",
+    "doctor:mobile-network:fix": "npm --workspace=mobile run doctor:network:fix",
+    "start:mobile:tunnel": "npm --workspace=mobile run start:tunnel -- -c",
+    "start:mobile:clean": "npm --workspace=mobile run start -- -c",
     "dev:frontend": "npm --workspace=frontend run dev"
   },
   "overrides": {

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../app';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { NotificationService } from '../services/notification.service';
 
 export const getNotifications = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -93,5 +94,29 @@ export const unregisterDevice = async (req: AuthenticatedRequest, res: Response)
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to unregister device' });
+  }
+};
+
+export const testAdminPush = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.role !== 'SUPER_ADMIN') {
+      res.status(403).json({ error: 'Only super admin can send test push notifications' });
+      return;
+    }
+
+    const notification = await NotificationService.sendNotification({
+      recipientId: req.user.id,
+      recipientRole: req.user.role,
+      type: 'TEST_PUSH',
+      title: 'Test Push Notification',
+      message: 'Admin phone push notifications are working.',
+      targetScreen: 'Approval',
+      data: { test: true },
+    });
+
+    res.json({ success: true, notificationId: notification.id });
+  } catch (error) {
+    console.error('Failed to send test push:', error);
+    res.status(500).json({ error: 'Failed to send test push notification' });
   }
 };

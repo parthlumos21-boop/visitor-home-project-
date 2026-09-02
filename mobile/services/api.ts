@@ -5,7 +5,7 @@ import { API_URL, API_URLS } from './apiConfig';
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 4000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -50,6 +50,10 @@ api.interceptors.response.use(
   },
   async (error) => {
     const config = error.config;
+    if (error.response?.status === 401) {
+      await useAuthStore.getState().clearAuth();
+    }
+
     const currentRetryIndex =
       typeof config?.__apiFallbackIndex === 'number'
         ? config.__apiFallbackIndex

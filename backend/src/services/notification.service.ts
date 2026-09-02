@@ -1,7 +1,9 @@
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
+import { Role } from '@prisma/client';
 import { prisma, io } from '../app';
 
 const expo = new Expo();
+const ADMIN_EMAIL = 'keval@swatiswitchgears.com';
 
 export interface SendNotificationPayload {
   recipientId?: string;
@@ -16,27 +18,25 @@ export interface SendNotificationPayload {
 }
 
 export class NotificationService {
-  /**
-   * Broadcasts a notification to an entire role group (e.g. all ADMINs)
-   */
-  static async sendRoleNotification(role: string, payload: Omit<SendNotificationPayload, 'recipientId' | 'recipientRole'>) {
-    const users = await prisma.user.findMany({ where: { role: role as any } });
-    if (!users.length) return;
+  static async sendRoleNotification(role: Role, payload: Omit<SendNotificationPayload, 'recipientId' | 'recipientRole'>) {
+    const users = await prisma.user.findMany({ where: { role, status: 'ACTIVE' } });
+    if (!users.length) {
+      console.warn(`[Push] No active users found for role ${role}`);
+      return [];
+    }
 
+    const notifications = [];
     for (const user of users) {
-      await this.sendNotification({
+      notifications.push(await this.sendNotification({
         ...payload,
         recipientId: user.id,
-        recipientRole: role
-      });
+        recipientRole: role,
+      }));
     }
+    return notifications;
   }
 
-  /**
-   * Sends a notification to a specific user, saving it to DB, emitting via Socket.IO, and sending via Expo Push
-   */
   static async sendNotification(payload: SendNotificationPayload) {
-    // 1. Save to Database
     const notification = await prisma.notification.create({
       data: {
         recipientId: payload.recipientId,
@@ -46,58 +46,60 @@ export class NotificationService {
         message: payload.message,
         visitorId: payload.visitorId,
         visitId: payload.visitId,
-        // @ts-ignore - targetScreen is in schema.prisma but Prisma client types are cached/stale
         targetScreen: payload.targetScreen,
         data: payload.data ? payload.data : undefined,
       }
     });
 
-    // 2. Real-Time Emission via Socket.IO
     if (payload.recipientId) {
       io.to(payload.recipientId).emit('new_notification', notification);
     } else if (payload.recipientRole) {
       io.emit('new_role_notification', notification);
     }
 
-    // 3. Expo Push Notification
     if (payload.recipientId) {
       const pushTokens = await prisma.pushToken.findMany({
         where: { userId: payload.recipientId, isActive: true }
       });
+      console.log(`[Push] ${payload.type} recipient=${payload.recipientId} tokens=${pushTokens.length}`);
 
-      if (pushTokens.length > 0) {
-        const messages: ExpoPushMessage[] = [];
-        for (const pt of pushTokens) {
-          if (!Expo.isExpoPushToken(pt.token)) {
-            console.error(`Push token ${pt.token} is not a valid Expo push token`);
-            continue;
-          }
-          messages.push({
-            to: pt.token,
-            sound: 'default',
-            priority: 'high',
-            channelId: 'default',
-            title: payload.title,
-            body: payload.message,
-            categoryId: payload.type,
-            data: { 
-              type: payload.type,
-              visitorId: payload.visitorId,
-              visitId: payload.visitId,
-              notificationId: notification.id,
-              targetScreen: payload.targetScreen,
-              ...(payload.data || {})
-            },
-          });
+      const messages: ExpoPushMessage[] = [];
+      for (const pt of pushTokens) {
+        if (!Expo.isExpoPushToken(pt.token)) {
+          console.error(`[Push] Invalid Expo token for user ${payload.recipientId}: ${pt.token}`);
+          continue;
         }
 
-        const chunks = expo.chunkPushNotifications(messages);
-        for (const chunk of chunks) {
-          try {
-            await expo.sendPushNotificationsAsync(chunk);
-          } catch (error) {
-            console.error('Error sending push notification chunk:', error);
-          }
+        messages.push({
+          to: pt.token,
+          sound: 'default',
+          priority: 'high',
+          channelId: 'default',
+          title: payload.title,
+          body: payload.message,
+          categoryId: payload.type,
+          data: {
+            type: payload.type,
+            visitorId: payload.visitorId,
+            visitId: payload.visitId,
+            notificationId: notification.id,
+            targetScreen: payload.targetScreen,
+            ...(payload.data || {}),
+          },
+        });
+      }
+
+      if (pushTokens.length > 0 && messages.length === 0) {
+        console.warn(`[Push] ${payload.type} recipient=${payload.recipientId} has no valid Expo push tokens`);
+      }
+
+      const chunks = expo.chunkPushNotifications(messages);
+      for (const chunk of chunks) {
+        try {
+          const tickets = await expo.sendPushNotificationsAsync(chunk);
+          console.log('[Push] Expo tickets:', JSON.stringify(tickets));
+        } catch (error) {
+          console.error('[Push] Error sending push notification chunk:', error);
         }
       }
     }
@@ -105,29 +107,52 @@ export class NotificationService {
     return notification;
   }
 
-  // --- NotificationDispatcher Logic ---
-
   static async notifyAdminOfNewAppointment(appointment: any) {
+    const payload = {
+      type: 'NEW_APPOINTMENT_REQUEST',
+      title: 'New Appointment Request',
+      message: `${appointment.fullName} has requested a visitor appointment.\n${appointment.appointmentId}`,
+      targetScreen: 'Approval',
+      data: { appointmentId: appointment.appointmentId },
+    };
+
+    const superAdmins = await prisma.user.findMany({
+      where: { role: Role.SUPER_ADMIN, status: 'ACTIVE' },
+      select: { id: true, role: true, email: true },
+    });
+
+    if (superAdmins.length > 0) {
+      console.log(`[Push] New appointment ${appointment.appointmentId}: notifying ${superAdmins.length} SUPER_ADMIN user(s)`);
+      const notifications = [];
+      for (const adminUser of superAdmins) {
+        notifications.push(await this.sendNotification({
+          ...payload,
+          recipientId: adminUser.id,
+          recipientRole: adminUser.role,
+        }));
+      }
+      return notifications;
+    }
+
     const adminUser = await prisma.user.findUnique({
-      where: { email: 'keval@swatiswitchgears.com' },
-      select: { id: true, role: true }
+      where: { email: ADMIN_EMAIL },
+      select: { id: true, role: true, email: true },
     });
     if (adminUser) {
+      console.log(`[Push] New appointment ${appointment.appointmentId}: notifying fallback admin ${adminUser.email}`);
       return this.sendNotification({
-        type: 'NEW_APPOINTMENT_REQUEST',
-        title: '🔔 New Appointment Request',
-        message: `${appointment.fullName} has requested a visitor appointment.\n${appointment.appointmentId}`,
+        ...payload,
         recipientId: adminUser.id,
         recipientRole: adminUser.role,
-        targetScreen: 'Approval',
-        data: { appointmentId: appointment.appointmentId }
       });
     }
+
+    console.warn(`[Push] New appointment ${appointment.appointmentId}: no SUPER_ADMIN or fallback admin found`);
   }
 
   static async notifyHostOfAppointmentApproval(appointment: any) {
     const employeeUser = await prisma.user.findFirst({
-      where: { name: appointment.personToMeet, role: 'EMPLOYEE' },
+      where: { name: appointment.personToMeet, role: Role.EMPLOYEE },
       select: { id: true, role: true }
     });
     if (employeeUser) {
@@ -153,7 +178,7 @@ export class NotificationService {
     if (visitorUser) {
       return this.sendNotification({
         type: 'APPOINTMENT_APPROVED',
-        title: '✅ Appointment Approved',
+        title: 'Appointment Approved',
         message: `Your appointment has been approved.\n${appointment.appointmentId}`,
         visitorId: appointment.appointmentId,
         recipientId: visitorUser.id,
@@ -173,7 +198,7 @@ export class NotificationService {
     if (visitorUser) {
       return this.sendNotification({
         type: 'APPOINTMENT_REJECTED',
-        title: '❌ Appointment Rejected',
+        title: 'Appointment Rejected',
         message: `Your appointment has been rejected.\n${appointment.appointmentId}`,
         visitorId: appointment.appointmentId,
         recipientId: visitorUser.id,
@@ -185,28 +210,20 @@ export class NotificationService {
   }
 
   static async notifyAdminOfVisitorArrival(visit: any) {
-    const adminUser = await prisma.user.findUnique({
-      where: { email: 'keval@swatiswitchgears.com' },
-      select: { id: true, role: true }
+    return this.sendRoleNotification(Role.SUPER_ADMIN, {
+      type: 'VISITOR_CHECKED_IN',
+      title: 'Visitor Checked In',
+      message: `${visit.visitor.name} has arrived at the gate.\n${visit.displayId || visit.id}`,
+      visitId: visit.id,
+      targetScreen: 'VisitDetails',
+      data: { visitId: visit.id }
     });
-    if (adminUser) {
-      return this.sendNotification({
-        type: 'VISITOR_CHECKED_IN',
-        title: 'Visitor Checked In',
-        message: `${visit.visitor.name} has arrived at the gate.\n${visit.displayId || visit.id}`,
-        visitId: visit.id,
-        recipientId: adminUser.id,
-        recipientRole: adminUser.role,
-        targetScreen: 'VisitDetails',
-        data: { visitId: visit.id }
-      });
-    }
   }
 
   static async notifyHostOfVisitorArrival(visit: any) {
     return this.sendNotification({
       type: 'VISITOR_CHECKED_IN',
-      title: '🔔 Visitor Arrived',
+      title: 'Visitor Arrived',
       message: `${visit.visitor.name} has arrived at the gate.\n${visit.displayId || visit.id}`,
       visitId: visit.id,
       recipientId: visit.host.id,
@@ -216,7 +233,7 @@ export class NotificationService {
     });
   }
 
-  static async notifySystemAlert(role: string, message: string) {
+  static async notifySystemAlert(role: Role, message: string) {
     return this.sendRoleNotification(role, {
       type: 'SYSTEM_ALERT',
       title: 'System Alert',

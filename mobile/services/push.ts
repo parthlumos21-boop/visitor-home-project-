@@ -3,16 +3,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 export async function registerForPushNotificationsAsync() {
-  // Expo Go in SDK 53+ dropped support for push notifications.
-  // We check this BEFORE importing expo-notifications so it doesn't crash on load.
-  if (Constants.appOwnership === 'expo') {
-    console.log('Push notifications are not supported in Expo Go. Please use a Development Build.');
-    return null;
-  }
-
-  // Dynamically import Notifications only if we are in a real build
   const Notifications = await import('expo-notifications');
-  let token;
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
@@ -25,33 +16,35 @@ export async function registerForPushNotificationsAsync() {
     });
   }
 
-  if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus !== 'granted') {
-      // Permission denied or disabled in settings
-      return null;
-    }
-    
-    const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
-    if (!projectId) {
-      console.log('Project ID not found');
-    }
-    try {
-      token = (await Notifications.getExpoPushTokenAsync({
-        projectId,
-      })).data;
-      console.log('Expo Push Token:', token);
-    } catch (e) {
-      console.log('Error getting push token', e);
-    }
-  } else {
+  if (!Device.isDevice) {
     console.log('Must use physical device for Push Notifications');
+    return null;
   }
 
-  return token;
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+
+  if (finalStatus !== 'granted') {
+    console.log('Push notification permission not granted');
+    return null;
+  }
+
+  const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+  if (!projectId) {
+    console.log('Expo project ID not found; cannot create push token');
+    return null;
+  }
+
+  try {
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    console.log('Expo Push Token:', token);
+    return token;
+  } catch (e) {
+    console.log('Error getting push token', e);
+    return null;
+  }
 }

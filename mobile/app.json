@@ -3,9 +3,6 @@
     "name": "Visitor Management",
     "slug": "mobile",
     "version": "1.0.0",
-    "packagerOpts": {
-      "port": 8082
-    },
     "scheme": "visitor-gate",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,6 +11,9 @@
       "supportsTablet": true
     },
     "android": {
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -49,9 +49,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "9e344794-0675-4daf-8403-ae73e38f0ad3"
+        "projectId": "070de9a4-c940-4115-ba5e-2ff9c4b7c26a"
       }
     },
-    "owner": "parthlumos21"
+    "owner": "saaho123s-team"
   }
 }

@@ -1,5 +1,5 @@
 
-> visitor-system@1.0.0 dev
+> visitor-system@1.0.0 dev:all
 > node tools/start-stack.js
 
 LAN IP: 192.168.10.161
@@ -13,12 +13,39 @@ Backend ready: http://192.168.10.161:5001/
 > mobile@1.0.0 start
 > powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-expo-8082.ps1 -c
 
-◇ injected env (2) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
-[server]: Server is running at http://0.0.0.0:5001
 Expo host: 192.168.10.161
 Mobile API: http://192.168.10.161:5001/api
+Phone Metro test: http://192.168.10.161:8082
+
+LAN IP: 192.168.10.161 (unknown)
+Phone test URL: http://192.168.10.161:8082
+API test URL:   http://192.168.10.161:5001
+◇ injected env (2) from .env // tip: ⌘ suppress logs { quiet: true }
+VPN check: skipped because Windows adapter query was denied
+VPN check: no active VPN-like adapter found
+Firewall check: no Metro rule found for port 8082
+Admin PowerShell: New-NetFirewallRule -DisplayName "Expo Metro 8082" -Direction Inbound -LocalPort 8082 -Protocol TCP -Action Allow
+Firewall check: no API rule found for port 5001
+Admin PowerShell: New-NetFirewallRule -DisplayName "Visitor API 5001" -Direction Inbound -LocalPort 5001 -Protocol TCP -Action Allow
+Metro port: not listening yet. Start the Expo server after this check.
+API port: not listening yet. Start the backend if the app loads but API calls time out.
+ADB: found
+ADB device: none connected/authorized. USB mode will not work until the phone is connected and USB debugging is accepted.
+
 Backend LAN check: 200
-ADB not found. Android device must reach the LAN API above.
+Android USB API: http://localhost:5001/api
+Android USB Metro: http://localhost:8082
+
+================================================================
+WARNING: Windows Firewall is likely blocking port 8082!
+If your phone cannot connect (Unable to load script), you MUST
+run this exact command in an Administrator PowerShell window:
+
+New-NetFirewallRule -DisplayName "Expo Server" -Direction Inbound -LocalPort 8082 -Protocol TCP -Action Allow
+================================================================
+
 Starting project at D:\visitor-home-project--main\mobile
-› Port 8082 is being used by another process
-› Skipping dev server
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8082
+Logs for your project will appear below.

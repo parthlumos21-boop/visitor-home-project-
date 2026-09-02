@@ -6,9 +6,10 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 
 const isExpoGo = Constants.appOwnership === 'expo';
+const canUseExpoNotifications = Platform.OS !== 'web' && !isExpoGo;
 
 let useLastNotificationResponse: any = () => null;
-if (Platform.OS !== 'web') {
+if (canUseExpoNotifications) {
   try {
     const Notifications = require('expo-notifications');
     useLastNotificationResponse = Notifications.useLastNotificationResponse;
@@ -16,7 +17,7 @@ if (Platform.OS !== 'web') {
 }
 
 // Configure foreground notification behavior for dev/production builds and Expo Go local notifications.
-if (Platform.OS !== 'web') {
+if (canUseExpoNotifications) {
   import('expo-notifications').then((Notifications) => {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
@@ -43,7 +44,8 @@ if (Platform.OS !== 'web') {
 
 import { useAuthStore } from '../store/authStore';
 import { registerForPushNotificationsAsync } from '../services/push';
-import { API_URL } from '../services/apiConfig';
+import { API_ORIGIN } from '../services/apiConfig';
+import api from '../services/api';
 
 interface NotificationItem {
   id: string;
@@ -70,8 +72,32 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
+const showSystemNotification = async (notification: NotificationItem) => {
+  if (!canUseExpoNotifications) return;
+
+  try {
+    const Notifications = await import('expo-notifications');
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: notification.title,
+        body: notification.message,
+        sound: 'default',
+        data: {
+          notificationId: notification.id,
+          targetScreen: notification.targetScreen,
+          ...(notification.data || {}),
+        },
+        ...(Platform.OS === 'android' ? { channelId: 'default' } : {}),
+      },
+      trigger: null,
+    });
+  } catch (err) {
+    console.log('Could not show status-bar notification', err);
+  }
+};
+
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const { user, token } = useAuthStore();
+  const { user, token, clearAuth } = useAuthStore();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -111,14 +137,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/notifications`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data);
-        setUnreadCount(data.filter((n: NotificationItem) => !n.isRead).length);
-      }
+      const res = await api.get('/notifications');
+      const data = res.data;
+      setNotifications(data);
+      setUnreadCount(data.filter((n: NotificationItem) => !n.isRead).length);
     } catch (e) {
       setError('Failed to fetch notifications');
     } finally {
@@ -131,14 +153,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const pushToken = await registerForPushNotificationsAsync();
     if (pushToken) {
       try {
-        await fetch(`${API_URL}/api/notifications/register-device`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}` 
-          },
-          body: JSON.stringify({ token: pushToken, platform: Platform.OS }),
-        });
+        await api.post('/notifications/register-device', { token: pushToken, platform: Platform.OS });
+        console.log('Push token registered with backend');
       } catch (e) {
         console.error('Failed to register push token with backend', e);
       }
@@ -151,11 +167,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       registerDevice();
 
       // Setup Socket.io
-      const newSocket = io(API_URL, {
+      const newSocket = io(API_ORIGIN, {
         auth: { token }
       });
 
       newSocket.on('connect', () => console.log('Socket connected'));
+      newSocket.on('connect_error', (err) => console.log('Socket connect error', err.message));
       
       const handleNewNotification = async (newNotif: NotificationItem) => {
         setNotifications((prev) => {
@@ -165,22 +182,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         });
         setUnreadCount((prev) => prev + 1);
 
-        // Trigger native banner and system sound while the app is in the foreground.
-        try {
-          if (Platform.OS !== 'web') {
-            const Notifications = await import('expo-notifications');
-            await Notifications.scheduleNotificationAsync({
-              content: {
-                title: newNotif.title,
-                body: newNotif.message,
-                sound: true,
-              },
-              trigger: Platform.OS === 'android' ? { channelId: 'default' } : null,
-            });
-          }
-        } catch (err) {
-          console.log('Could not trigger system sound', err);
-        }
+        await showSystemNotification(newNotif);
 
         // Display Instagram-style in-app toast notification
         Toast.show({
@@ -229,10 +231,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setNotifications((prev) => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     setUnreadCount((prev) => Math.max(0, prev - 1));
     try {
-      await fetch(`${API_URL}/api/notifications/${id}/read`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.patch(`/notifications/${id}/read`);
     } catch (e) {
       console.error('Failed to mark as read', e);
     }
@@ -242,10 +241,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setNotifications((prev) => prev.map(n => ({ ...n, isRead: true })));
     setUnreadCount(0);
     try {
-      await fetch(`${API_URL}/api/notifications/read-all`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.patch('/notifications/read-all');
     } catch (e) {
       console.error('Failed to mark all as read', e);
     }
