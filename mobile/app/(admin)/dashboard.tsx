@@ -117,27 +117,15 @@ export default function AdminDashboard() {
     },
   ];
 
-  const DEPARTMENTS = [
-    { name: 'Marketing Dept', color: 'bg-yellow-400' },
-    { name: 'Electrical Design', color: 'bg-sky-400' },
-    { name: 'Mechanical Dept', color: 'bg-red-400' },
-    { name: 'Production & QC', color: 'bg-orange-300' }, // Peach
-    { name: 'Dispatch', color: 'bg-green-400' },
-  ];
-
-  // Calculate responsive card width
   const numColumns = width >= 1024 ? 4 : width >= 768 ? 3 : 2;
   const gap = 12;
-  const padding = 32; // 16 on each side
+  const padding = 32;
   const availableWidth = width - padding - (numColumns - 1) * gap;
   const cardWidth = availableWidth / numColumns;
 
   return (
     <View className="flex-1 bg-gray-50">
-      <View
-        className="bg-white border-b border-gray-200 px-4 pb-3"
-        style={{ paddingTop: insets.top + 8 }}
-      >
+      <View className="bg-white border-b border-gray-200 px-4 pb-3" style={{ paddingTop: insets.top + 8 }}>
         <View className="flex-row items-center justify-between">
           <Text className="flex-1 text-xl font-bold text-gray-950">Admin</Text>
 
@@ -163,12 +151,10 @@ export default function AdminDashboard() {
         </View>
       </View>
 
-      <ScrollView 
-        className="flex-1" 
+      <ScrollView
+        className="flex-1"
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />}
       >
         <Text className="text-2xl font-bold text-gray-950">Good Morning, {adminName || 'Admin'}</Text>
         <Text className="mt-1 text-base text-gray-600">Manage visitors and appointments</Text>
@@ -186,10 +172,7 @@ export default function AdminDashboard() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View 
-            className="mt-6 flex-row flex-wrap" 
-            style={{ gap: gap }}
-          >
+          <View className="mt-6 flex-row flex-wrap" style={{ gap }}>
             {cards.map((card) => (
               <TouchableOpacity
                 key={card.title}
@@ -206,64 +189,12 @@ export default function AdminDashboard() {
                 <Text className="min-h-[40px] text-sm font-semibold leading-5 text-gray-700">{card.title}</Text>
                 <View className="flex-1 justify-end">
                   <Text className="text-3xl font-bold text-gray-950">{String(card.value).padStart(2, '0')}</Text>
-                  <Text className="mt-2 text-sm font-semibold text-blue-700">{'View ->'}</Text>
+                  <Text className="mt-2 text-sm font-semibold text-blue-700">View -&gt;</Text>
                 </View>
               </TouchableOpacity>
             ))}
           </View>
         )}
-
-        {/* Departments Section */}
-        <View className="mt-8 mb-2">
-          <Text className="text-lg font-bold text-gray-950 mb-3">Departments</Text>
-          <View className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-            {DEPARTMENTS.map((dept, index) => (
-              <TouchableOpacity
-                key={dept.name}
-                onPress={() => router.push(`/(admin)/employees?department=${encodeURIComponent(dept.name)}`)}
-                className={`flex-row items-center justify-between p-4 ${index !== DEPARTMENTS.length - 1 ? 'border-b border-gray-100' : ''}`}
-                activeOpacity={0.7}
-              >
-                <View className="flex-row items-center">
-                  <View className={`w-3 h-3 rounded-full ${dept.color} mr-3`} />
-                  <Text className="text-base font-semibold text-gray-800">{dept.name}</Text>
-                </View>
-                <View className="flex-row items-center">
-                  <Text className="text-sm font-medium text-gray-500 mr-2">
-                    {stats.employeesByDept?.[dept.name] || 0} Employees
-                  </Text>
-                  <Text className="text-gray-400 font-bold">→</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Quick Actions */}
-        <View className="mt-8 mb-4">
-          <Text className="text-lg font-bold text-gray-950 mb-3">Quick Actions</Text>
-          <View className="flex-row flex-wrap justify-between" style={{ gap: gap }}>
-            <TouchableOpacity
-              onPress={() => router.push('/(admin)/employees/new')}
-              className="bg-blue-600 rounded-lg h-12 justify-center items-center flex-row"
-              style={{ width: cardWidth * 2 + gap, maxWidth: 300 }}
-              activeOpacity={0.8}
-            >
-              <Text className="text-white font-semibold text-base">+ Add Employee</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => router.push('/(admin)/employees')}
-              className="bg-white border border-gray-200 rounded-lg h-12 justify-center items-center flex-row shadow-sm"
-              style={{ width: cardWidth * 2 + gap, maxWidth: 300 }}
-              activeOpacity={0.7}
-            >
-              <Users color="#374151" size={18} />
-              <Text className="text-gray-800 font-semibold text-base ml-2">Employees List</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
       </ScrollView>
 
       <Modal transparent visible={isLogoutVisible} animationType="fade" onRequestClose={() => setLogoutVisible(false)}>
@@ -300,7 +231,7 @@ export default function AdminDashboard() {
                 <X color="#374151" size={21} />
               </TouchableOpacity>
             </View>
-            
+
             {loadingNotifications ? (
               <View className="py-4 items-center justify-center">
                 <ActivityIndicator size="small" color="#2563eb" />

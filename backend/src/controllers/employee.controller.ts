@@ -4,6 +4,24 @@ import { prisma } from '../app';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import bcrypt from 'bcryptjs';
 
+const getUniqueConstraintMessage = (error: any): string | null => {
+  if (error?.code !== 'P2002') {
+    return null;
+  }
+
+  const fields = Array.isArray(error.meta?.target) ? error.meta.target : [];
+
+  if (fields.includes('phone')) {
+    return 'An employee with this mobile number already exists.';
+  }
+
+  if (fields.includes('email')) {
+    return 'An employee with this email address already exists.';
+  }
+
+  return 'An employee with these details already exists.';
+};
+
 export const getEmployees = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { department } = req.query;
@@ -82,11 +100,15 @@ export const getEmployeeById = async (req: AuthenticatedRequest, res: Response):
 
 export const createEmployee = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { name, employeeId, phone, email, department, designation, role, status } = req.body;
+    const { name, employeeId, phone, email, password, department, designation, role, status } = req.body;
 
-    // Use default password
+    if (typeof password !== 'string' || password.trim().length < 6) {
+      res.status(400).json({ error: 'Password must be at least 6 characters.' });
+      return;
+    }
+
     const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash('employee123', salt);
+    const passwordHash = await bcrypt.hash(password.trim(), salt);
 
     const newEmployee = await (prisma.user as any).create({
       data: {
@@ -105,7 +127,13 @@ export const createEmployee = async (req: AuthenticatedRequest, res: Response): 
     res.status(201).json({ id: newEmployee.id, message: 'Employee created successfully' });
   } catch (error: any) {
     console.error('createEmployee error:', error);
-    res.status(500).json({ error: error.message || 'Failed to create employee' });
+    const uniqueConstraintMessage = getUniqueConstraintMessage(error);
+    if (uniqueConstraintMessage) {
+      res.status(400).json({ error: uniqueConstraintMessage });
+      return;
+    }
+
+    res.status(500).json({ error: 'Failed to create employee' });
   }
 };
 
@@ -130,7 +158,13 @@ export const updateEmployee = async (req: AuthenticatedRequest, res: Response): 
     res.json({ message: 'Employee updated successfully' });
   } catch (error: any) {
     console.error('updateEmployee error:', error);
-    res.status(500).json({ error: error.message || 'Failed to update employee' });
+    const uniqueConstraintMessage = getUniqueConstraintMessage(error);
+    if (uniqueConstraintMessage) {
+      res.status(400).json({ error: uniqueConstraintMessage });
+      return;
+    }
+
+    res.status(500).json({ error: 'Failed to update employee' });
   }
 };
 

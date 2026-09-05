@@ -1,13 +1,16 @@
 import { Tabs } from 'expo-router';
-import { Home, Users, CheckSquare, Settings, Bell } from 'lucide-react-native';
+import { Bell, CheckSquare, Home, UserCircle, Users } from 'lucide-react-native';
 import { View, Text } from 'react-native';
 import { useNotifications } from '../../context/NotificationContext';
 
 export default function AdminLayout() {
   const { unreadCount } = useNotifications();
+
   return (
-    <Tabs screenOptions={{ 
+    <Tabs screenOptions={{
       tabBarActiveTintColor: '#2563eb',
+      tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+      tabBarItemStyle: { paddingVertical: 4 },
       headerShown: false,
       headerTitleStyle: { fontWeight: 'bold' }
     }}>
@@ -33,6 +36,19 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="employees/index"
+        options={{
+          title: 'Employee',
+          tabBarIcon: ({ color }) => <UserCircle color={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="employees/[id]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="notifications"
         options={{
           title: 'Alerts',
@@ -51,8 +67,7 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="more"
         options={{
-          title: 'More',
-          tabBarIcon: ({ color }) => <Settings color={color} size={24} />,
+          href: null,
         }}
       />
       <Tabs.Screen

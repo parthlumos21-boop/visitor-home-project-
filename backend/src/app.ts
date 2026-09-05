@@ -8,6 +8,7 @@ dotenv.config();
 
 const app: Express = express();
 const port = Number(process.env.PORT || 5001);
+const host = process.env.HOST || '0.0.0.0';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL as string });
 export const prisma = new PrismaClient({ 
@@ -95,6 +96,19 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ error: err.message || 'Something went wrong!' });
 });
 
-server.listen(port, '0.0.0.0', () => {
-  console.log(`[server]: Server is running at http://0.0.0.0:${port}`);
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(
+      `[server]: Cannot start because ${host}:${port} is already in use. ` +
+      'Stop the existing process, or use the running backend if it is Visitor Gate API.'
+    );
+    process.exit(1);
+  }
+
+  console.error('[server]: Failed to start server', error);
+  process.exit(1);
+});
+
+server.listen(port, host, () => {
+  console.log(`[server]: Server is running at http://${host}:${port}`);
 });

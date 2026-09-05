@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { ChevronLeft, UserCircle, Briefcase, Mail, Phone, Hash } from 'lucide-react-native';
+import { ChevronLeft, UserCircle, Briefcase, Mail, Phone } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getEmployeeById, EmployeeDetails as EmployeeDetailsType } from '../../../services/employee';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -59,21 +59,9 @@ export default function EmployeeDetails() {
             <UserCircle color="#2563eb" size={64} strokeWidth={1} />
           </View>
           <Text className="text-2xl font-bold text-gray-900">{employee.name}</Text>
-          <View className={`px-3 py-1 rounded-full mt-2 ${employee.status === 'ACTIVE' ? 'bg-green-100' : 'bg-red-100'}`}>
-            <Text className={`text-xs font-bold ${employee.status === 'ACTIVE' ? 'text-green-700' : 'text-red-700'}`}>
-              ● {employee.status}
-            </Text>
-          </View>
         </View>
 
         <View className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm mb-6">
-          <View className="flex-row items-center mb-4 pb-4 border-b border-gray-100">
-            <Hash color="#6b7280" size={20} className="mr-3" />
-            <View>
-              <Text className="text-sm text-gray-500">Employee ID</Text>
-              <Text className="text-base font-semibold text-gray-900">{employee.employeeId || 'N/A'}</Text>
-            </View>
-          </View>
           <View className="flex-row items-center mb-4 pb-4 border-b border-gray-100">
             <UserCircle color="#6b7280" size={20} className="mr-3" />
             <View>
@@ -86,13 +74,6 @@ export default function EmployeeDetails() {
             <View>
               <Text className="text-sm text-gray-500">Department</Text>
               <Text className="text-base font-semibold text-gray-900">{employee.department || 'N/A'}</Text>
-            </View>
-          </View>
-          <View className="flex-row items-center mb-4 pb-4 border-b border-gray-100">
-            <Briefcase color="#6b7280" size={20} className="mr-3" />
-            <View>
-              <Text className="text-sm text-gray-500">Designation</Text>
-              <Text className="text-base font-semibold text-gray-900">{employee.designation || 'N/A'}</Text>
             </View>
           </View>
           <View className="flex-row items-center mb-4 pb-4 border-b border-gray-100">

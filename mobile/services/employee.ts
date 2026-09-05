@@ -5,6 +5,7 @@ export interface Employee {
   employeeId: string | null;
   name: string;
   email: string;
+  password?: string;
   phone: string | null;
   department: string | null;
   designation: string | null;
