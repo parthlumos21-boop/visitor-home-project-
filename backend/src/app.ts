@@ -22,6 +22,7 @@ import adminRoutes from './routes/admin';
 import activityRoutes from './routes/activity';
 import appointmentRoutes from './routes/appointment';
 import notificationRoutes from './routes/notification';
+import employeeRoutes from './routes/employee';
 
 // Middleware
 app.use(cors());
@@ -41,6 +42,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/new-appointments', appointmentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/employees', employeeRoutes);
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {

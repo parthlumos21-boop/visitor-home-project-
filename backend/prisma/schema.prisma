@@ -8,11 +8,14 @@ datasource db {
 
 model User {
   id            String    @id @default(uuid())
+  employeeId    String?
   name          String
   phone         String?   @unique
   email         String    @unique
   passwordHash  String
   role          Role      
+  department    String?
+  designation   String?
   status        String    @default("ACTIVE")
   createdAt     DateTime  @default(now())
   

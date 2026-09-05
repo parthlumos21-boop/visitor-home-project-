@@ -17,11 +17,13 @@ if ($useTunnel) {
   $expoArgs = @('expo', 'start', '--port', $port, '--host', 'lan')
 }
 
-if ($useExpoGo) {
-  $ExtraArgs = $ExtraArgs | Where-Object { $_ -ne '--go' }
-  $expoArgs += '--go'
-} else {
+$useDevClient = $ExtraArgs -contains '--dev-client'
+
+if ($useDevClient) {
+  $ExtraArgs = $ExtraArgs | Where-Object { $_ -ne '--dev-client' }
   $expoArgs += '--dev-client'
+} else {
+  $expoArgs += '--go'
 }
 
 $expoArgs += $ExtraArgs

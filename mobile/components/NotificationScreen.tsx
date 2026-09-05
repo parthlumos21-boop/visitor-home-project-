@@ -3,8 +3,10 @@ import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshContr
 import { useRouter } from 'expo-router';
 import { useNotifications } from '../context/NotificationContext';
 import { Bell, Check, Clock } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function NotificationScreen() {
+  const insets = useSafeAreaInsets();
   const { notifications, loading, error, refreshNotifications, markAsRead, markAllAsRead } = useNotifications();
   const router = useRouter();
 
@@ -56,7 +58,10 @@ export default function NotificationScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <View className="flex-row justify-between items-center px-4 py-4 bg-white border-b border-gray-200 shadow-sm">
+      <View 
+        className="flex-row justify-between items-center px-4 pb-4 bg-white border-b border-gray-200 shadow-sm"
+        style={{ paddingTop: insets.top + 16 }}
+      >
         <Text className="text-xl font-bold text-gray-900">Notifications</Text>
         <TouchableOpacity onPress={markAllAsRead} className="flex-row items-center">
           <Check size={16} color="#4f46e5" />

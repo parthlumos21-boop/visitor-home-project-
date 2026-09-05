@@ -3,17 +3,25 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 export async function registerForPushNotificationsAsync() {
+  const isExpoGo = Constants.appOwnership === 'expo';
+  if (isExpoGo) {
+    console.log('Skipping push notification registration in Expo Go.');
+    return null;
+  }
+
   const Notifications = await import('expo-notifications');
 
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
+    console.log('📱 [Push Config] Attempting to configure MAX lock screen channel...');
+    await Notifications.setNotificationChannelAsync('max', {
+      name: 'max',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF231F7C',
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       sound: 'default',
     });
+    console.log('✅ [Push Config] Successfully locked channel [max] to MAX importance & PUBLIC lock screen!');
   }
 
   if (!Device.isDevice) {

@@ -1,10 +1,31 @@
-import React from 'react';
-import { View, ScrollView, Text, TouchableOpacity, Alert } from 'react-native';
-import { ClipboardList, Clock, History, Plus } from 'lucide-react-native';
+import React, { useState, useCallback } from 'react';
+import { View, ScrollView, Text, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { ClipboardList, Clock, History, Plus, LogOut } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '../../store/authStore';
 
 export default function VisitorDashboard() {
   const router = useRouter();
+  const { user, clearAuth } = useAuthStore();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    // Simulate network request for now until real data is connected
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Logout", style: "destructive", onPress: () => {
+        clearAuth();
+        router.replace('/(auth)/login');
+      }}
+    ]);
+  };
 
   const handleCardPress = (title: string, routeName: string) => {
     try {
@@ -18,10 +39,16 @@ export default function VisitorDashboard() {
   
 
   return (
-    <ScrollView className="flex-1 bg-gray-50" contentContainerStyle={{ padding: 16 }}>
+    <ScrollView 
+      className="flex-1 bg-gray-50" 
+      contentContainerStyle={{ padding: 16 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+      }
+    >
       
       {/* Top Action Bar with spacing for responsive layout */}
-      <View className="flex-row justify-end mt-16 mb-5">
+      <View className="flex-row justify-between items-center mt-16 mb-5">
         <TouchableOpacity 
           onPress={() => {
             console.log("Navigating to new registration...");
@@ -32,11 +59,18 @@ export default function VisitorDashboard() {
           <Plus color="#ffffff" size={18} className="mr-2" />
           <Text className="text-white font-bold text-sm">New Appointment</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          onPress={handleLogout}
+          className="p-3 bg-white rounded-full shadow-sm border border-gray-100"
+        >
+          <LogOut color="#ef4444" size={20} />
+        </TouchableOpacity>
       </View>
 
       {/* Welcome Card */}
       <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
-        <Text className="text-xl font-bold text-gray-900 mb-2">Welcome, John 👋</Text>
+        <Text className="text-xl font-bold text-gray-900 mb-2">Welcome, {user?.name || 'Visitor'} 👋</Text>
         <Text className="text-sm font-semibold text-gray-800 mb-1">Your Visitor Dashboard</Text>
         <Text className="text-xs text-gray-500">Manage your appointments.</Text>
       </View>

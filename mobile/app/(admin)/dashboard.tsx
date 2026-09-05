@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable, useWindowDimensions } from 'react-native';
+import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable, useWindowDimensions, RefreshControl } from 'react-native';
 import { Bell, CalendarDays, Clock, LogOut, UserCheck, Users, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,8 @@ const emptyStats: AdminDashboardStats = {
   currentlyInside: 0,
   appointmentsToday: 0,
   adminName: 'Admin User',
+  totalEmployees: 0,
+  employeesByDept: {},
 };
 
 export default function AdminDashboard() {
@@ -28,6 +30,7 @@ export default function AdminDashboard() {
   const [isNotificationsVisible, setNotificationsVisible] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadNotifications = async () => {
     try {
@@ -59,6 +62,12 @@ export default function AdminDashboard() {
       setIsLoading(false);
     }
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadDashboard();
+    setRefreshing(false);
+  }, [loadDashboard]);
 
   useEffect(() => {
     loadDashboard();
@@ -99,6 +108,21 @@ export default function AdminDashboard() {
       onPress: () => router.push('/(admin)/approvals'),
       accent: 'bg-violet-50',
     },
+    {
+      title: 'Total Employees',
+      value: stats.totalEmployees || 0,
+      icon: <Users color="#0284c7" size={22} />,
+      onPress: () => router.push('/(admin)/employees'),
+      accent: 'bg-sky-50',
+    },
+  ];
+
+  const DEPARTMENTS = [
+    { name: 'Marketing Dept', color: 'bg-yellow-400' },
+    { name: 'Electrical Design', color: 'bg-sky-400' },
+    { name: 'Mechanical Dept', color: 'bg-red-400' },
+    { name: 'Production & QC', color: 'bg-orange-300' }, // Peach
+    { name: 'Dispatch', color: 'bg-green-400' },
   ];
 
   // Calculate responsive card width
@@ -139,7 +163,13 @@ export default function AdminDashboard() {
         </View>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+      <ScrollView 
+        className="flex-1" 
+        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />
+        }
+      >
         <Text className="text-2xl font-bold text-gray-950">Good Morning, {adminName || 'Admin'}</Text>
         <Text className="mt-1 text-base text-gray-600">Manage visitors and appointments</Text>
 
@@ -182,6 +212,58 @@ export default function AdminDashboard() {
             ))}
           </View>
         )}
+
+        {/* Departments Section */}
+        <View className="mt-8 mb-2">
+          <Text className="text-lg font-bold text-gray-950 mb-3">Departments</Text>
+          <View className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+            {DEPARTMENTS.map((dept, index) => (
+              <TouchableOpacity
+                key={dept.name}
+                onPress={() => router.push(`/(admin)/employees?department=${encodeURIComponent(dept.name)}`)}
+                className={`flex-row items-center justify-between p-4 ${index !== DEPARTMENTS.length - 1 ? 'border-b border-gray-100' : ''}`}
+                activeOpacity={0.7}
+              >
+                <View className="flex-row items-center">
+                  <View className={`w-3 h-3 rounded-full ${dept.color} mr-3`} />
+                  <Text className="text-base font-semibold text-gray-800">{dept.name}</Text>
+                </View>
+                <View className="flex-row items-center">
+                  <Text className="text-sm font-medium text-gray-500 mr-2">
+                    {stats.employeesByDept?.[dept.name] || 0} Employees
+                  </Text>
+                  <Text className="text-gray-400 font-bold">→</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Quick Actions */}
+        <View className="mt-8 mb-4">
+          <Text className="text-lg font-bold text-gray-950 mb-3">Quick Actions</Text>
+          <View className="flex-row flex-wrap justify-between" style={{ gap: gap }}>
+            <TouchableOpacity
+              onPress={() => router.push('/(admin)/employees/new')}
+              className="bg-blue-600 rounded-lg h-12 justify-center items-center flex-row"
+              style={{ width: cardWidth * 2 + gap, maxWidth: 300 }}
+              activeOpacity={0.8}
+            >
+              <Text className="text-white font-semibold text-base">+ Add Employee</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/(admin)/employees')}
+              className="bg-white border border-gray-200 rounded-lg h-12 justify-center items-center flex-row shadow-sm"
+              style={{ width: cardWidth * 2 + gap, maxWidth: 300 }}
+              activeOpacity={0.7}
+            >
+              <Users color="#374151" size={18} />
+              <Text className="text-gray-800 font-semibold text-base ml-2">Employees List</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
       </ScrollView>
 
       <Modal transparent visible={isLogoutVisible} animationType="fade" onRequestClose={() => setLogoutVisible(false)}>

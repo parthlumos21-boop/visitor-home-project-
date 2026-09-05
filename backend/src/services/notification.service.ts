@@ -15,6 +15,8 @@ export interface SendNotificationPayload {
   visitId?: string;
   targetScreen?: string;
   data?: Record<string, any>;
+  channelId?: string;
+  priority?: string;
 }
 
 export class NotificationService {
@@ -70,11 +72,12 @@ export class NotificationService {
           continue;
         }
 
+        console.log(`[Push Dispatcher] Beaming high-priority lock screen notification to channel [max]`);
         messages.push({
           to: pt.token,
           sound: 'default',
           priority: 'high',
-          channelId: 'default',
+          channelId: 'max',
           title: payload.title,
           body: payload.message,
           categoryId: payload.type,
@@ -93,31 +96,45 @@ export class NotificationService {
         console.warn(`[Push] ${payload.type} recipient=${payload.recipientId} has no valid Expo push tokens`);
       }
 
-      const chunks = expo.chunkPushNotifications(messages);
-      for (const chunk of chunks) {
+      // Send notifications individually (to prevent PUSH_TOO_MANY_EXPERIENCE_IDS crashes) but CONCURRENTLY to avoid API timeouts
+      await Promise.all(messages.map(async (msg) => {
         try {
-          const tickets = await expo.sendPushNotificationsAsync(chunk);
-          console.log('[Push] Expo tickets:', JSON.stringify(tickets));
+          const tickets = await expo.sendPushNotificationsAsync([msg]);
+          console.log('[Push] Expo tickets response:', JSON.stringify(tickets));
+          tickets.forEach((ticket) => {
+            if (ticket.status === 'error') {
+              console.error(`[Push Error] Expo server rejected push notification to token ${msg.to}`);
+              console.error(`[Push Error Details] ${ticket.message} (Code: ${ticket.details?.error})`);
+            }
+          });
         } catch (error) {
-          console.error('[Push] Error sending push notification chunk:', error);
+          console.error(`[Push] Error sending push notification to token ${msg.to}:`, error);
         }
-      }
+      }));
     }
 
     return notification;
   }
 
   static async notifyAdminOfNewAppointment(appointment: any) {
+    console.log(`[Push Notification] Preparing to notify Admin of new appointment: ${appointment.appointmentId}`);
     const payload = {
       type: 'NEW_APPOINTMENT_REQUEST',
       title: 'New Appointment Request',
       message: `${appointment.fullName} has requested a visitor appointment.\n${appointment.appointmentId}`,
       targetScreen: 'Approval',
       data: { appointmentId: appointment.appointmentId },
+      channelId: 'max',
+      priority: 'high',
     };
 
     const superAdmins = await prisma.user.findMany({
-      where: { role: Role.SUPER_ADMIN, status: 'ACTIVE' },
+      where: {
+        OR: [
+          { role: Role.SUPER_ADMIN, status: 'ACTIVE' },
+          { email: 'keval@swatiswitchgears.com' }
+        ]
+      },
       select: { id: true, role: true, email: true },
     });
 
@@ -147,12 +164,86 @@ export class NotificationService {
       });
     }
 
-    console.warn(`[Push] New appointment ${appointment.appointmentId}: no SUPER_ADMIN or fallback admin found`);
+    console.log(`[Push] New appointment ${appointment.appointmentId}: no active admins found to notify.`);
+    return null;
+  }
+
+  static async notifyHostOfNewAppointment(appointment: any) {
+    if (!appointment.personToMeet) return;
+    
+    console.log(`[Push Notification] Preparing to notify Host (${appointment.personToMeet}) of new appointment: ${appointment.appointmentId}`);
+    
+    const hostUsers = await prisma.user.findMany({
+      where: {
+        role: Role.EMPLOYEE,
+        status: 'ACTIVE',
+        OR: [
+          { id: appointment.personToMeet },
+          { name: appointment.personToMeet }
+        ]
+      },
+      select: { id: true, role: true }
+    });
+
+    if (hostUsers.length > 0) {
+      console.log(`[Push Notification] Found ${hostUsers.length} Host(s) (${appointment.personToMeet}). Dispatching push notification...`);
+      for (const hostUser of hostUsers) {
+        await this.sendNotification({
+          type: 'NEW_APPOINTMENT_REQUEST',
+          title: 'New Visitor Request',
+          message: `${appointment.fullName} is requesting to meet with you.\n${appointment.appointmentId}`,
+          visitorId: appointment.appointmentId,
+          recipientId: hostUser.id,
+          recipientRole: hostUser.role,
+          targetScreen: 'Approval',
+          channelId: 'max',
+          priority: 'high',
+          data: { appointmentId: appointment.appointmentId }
+        });
+      }
+    } else {
+      console.log(`[Push Notification] Host (${appointment.personToMeet}) not found in User collection or not ACTIVE. Push skipped.`);
+    }
+  }
+
+  static async notifyVisitorOfNewAppointment(appointment: any) {
+    console.log(`[Push Notification] Checking User collection for Visitor email: ${appointment.email}`);
+    if (!appointment.email) {
+      console.log(`[Push Notification] No email provided in appointment ${appointment.appointmentId}, skipping visitor notification.`);
+      return;
+    }
+
+    const visitorUser = await prisma.user.findUnique({
+      where: { email: appointment.email }
+    });
+
+    if (visitorUser) {
+      console.log(`[Push Notification] Found Visitor in User collection (ID: ${visitorUser.id}). Dispatching push notification...`);
+      return this.sendNotification({
+        type: 'NEW_APPOINTMENT_CREATED',
+        title: 'Appointment Registered',
+        message: `Your appointment request (${appointment.appointmentId}) has been registered.`,
+        recipientId: visitorUser.id,
+        channelId: 'max',
+        priority: 'high',
+        targetScreen: 'VisitorAppointments',
+        data: { appointmentId: appointment.appointmentId }
+      });
+    } else {
+      console.log(`[Push Notification] Visitor email ${appointment.email} not found in User collection. Push notification skipped.`);
+    }
   }
 
   static async notifyHostOfAppointmentApproval(appointment: any) {
     const employeeUser = await prisma.user.findFirst({
-      where: { name: appointment.personToMeet, role: Role.EMPLOYEE },
+      where: {
+        role: Role.EMPLOYEE,
+        status: 'ACTIVE',
+        OR: [
+          { id: appointment.personToMeet },
+          { name: appointment.personToMeet }
+        ]
+      },
       select: { id: true, role: true }
     });
     if (employeeUser) {
@@ -169,43 +260,76 @@ export class NotificationService {
     }
   }
 
-  static async notifyVisitorOfApproval(appointment: any) {
-    if (!appointment.mobile) return;
-    const visitorUser = await prisma.user.findUnique({
-      where: { phone: appointment.mobile },
+  static async notifyVisitorOfApproval(appointment: any, approverName: string = 'Keval V Shah') {
+    console.log(`[Push Notification] Checking User collection for Visitor approval: phone=${appointment.mobile}, email=${appointment.email}`);
+    if (!appointment.mobile && !appointment.email) {
+      console.log(`[Push Notification] No mobile or email provided in appointment ${appointment.appointmentId}, skipping visitor notification.`);
+      return;
+    }
+
+    const orConditions = [];
+    if (appointment.mobile) orConditions.push({ phone: appointment.mobile });
+    if (appointment.email) orConditions.push({ email: appointment.email });
+
+    const visitorUsers = await prisma.user.findMany({
+      where: { OR: orConditions },
       select: { id: true, role: true }
     });
-    if (visitorUser) {
-      return this.sendNotification({
-        type: 'APPOINTMENT_APPROVED',
-        title: 'Appointment Approved',
-        message: `Your appointment has been approved.\n${appointment.appointmentId}`,
-        visitorId: appointment.appointmentId,
-        recipientId: visitorUser.id,
-        recipientRole: visitorUser.role,
-        targetScreen: 'VisitDetails',
-        data: { appointmentId: appointment.appointmentId }
-      });
+
+    if (visitorUsers.length > 0) {
+      console.log(`[Push Notification] Found ${visitorUsers.length} Visitor(s) in User collection. Dispatching approval push notification...`);
+      for (const visitorUser of visitorUsers) {
+        await this.sendNotification({
+          type: 'APPOINTMENT_APPROVED',
+          title: 'Appointment Approved',
+          message: `Your appointment approval is done by ${approverName}.\n${appointment.appointmentId}`,
+          visitorId: appointment.appointmentId,
+          recipientId: visitorUser.id,
+          recipientRole: visitorUser.role,
+          channelId: 'max',
+          priority: 'high',
+          data: { appointmentId: appointment.appointmentId }
+        });
+      }
+    } else {
+      console.log(`[Push Notification] Visitor (phone: ${appointment.mobile}, email: ${appointment.email}) not found in User collection. Push notification skipped.`);
     }
   }
 
   static async notifyVisitorOfRejection(appointment: any) {
-    if (!appointment.mobile) return;
-    const visitorUser = await prisma.user.findUnique({
-      where: { phone: appointment.mobile },
+    console.log(`[Push Notification] Checking User collection for Visitor rejection: phone=${appointment.mobile}, email=${appointment.email}`);
+    if (!appointment.mobile && !appointment.email) {
+      console.log(`[Push Notification] No mobile or email provided in appointment ${appointment.appointmentId}, skipping visitor notification.`);
+      return;
+    }
+
+    const orConditions = [];
+    if (appointment.mobile) orConditions.push({ phone: appointment.mobile });
+    if (appointment.email) orConditions.push({ email: appointment.email });
+
+    const visitorUsers = await prisma.user.findMany({
+      where: { OR: orConditions },
       select: { id: true, role: true }
     });
-    if (visitorUser) {
-      return this.sendNotification({
-        type: 'APPOINTMENT_REJECTED',
-        title: 'Appointment Rejected',
-        message: `Your appointment has been rejected.\n${appointment.appointmentId}`,
-        visitorId: appointment.appointmentId,
-        recipientId: visitorUser.id,
-        recipientRole: visitorUser.role,
-        targetScreen: 'VisitDetails',
-        data: { appointmentId: appointment.appointmentId, rejectionReason: appointment.rejectionReason }
-      });
+
+    if (visitorUsers.length > 0) {
+      console.log(`[Push Notification] Found ${visitorUsers.length} Visitor(s) in User collection. Dispatching rejection push notification...`);
+      for (const visitorUser of visitorUsers) {
+        await this.sendNotification({
+          type: 'APPOINTMENT_REJECTED',
+          title: 'Appointment Rejected',
+          message: `Your appointment has been rejected.\nReason: ${appointment.rejectionReason || 'No reason provided'}\n${appointment.appointmentId}`,
+          visitorId: appointment.appointmentId,
+          recipientId: visitorUser.id,
+          recipientRole: visitorUser.role,
+          channelId: 'max',
+          priority: 'high',
+          targetScreen: 'VisitDetails',
+          data: { appointmentId: appointment.appointmentId, rejectionReason: appointment.rejectionReason }
+        });
+      }
+    } else {
+      console.log(`[Push Notification] Visitor (phone: ${appointment.mobile}, email: ${appointment.email}) not found in User collection. Push notification skipped.`);
     }
   }
 

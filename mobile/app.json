@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Visitor Management",
-    "slug": "mobile",
+    "slug": "visitor-system",
     "version": "1.0.0",
     "scheme": "visitor-gate",
     "orientation": "portrait",
@@ -47,11 +47,11 @@
       "./plugins/withCustomNotificationLayoutAndroid.js",
       "./plugins/withNotificationContentExtensionIOS.js"
     ],
+    "owner": "saaho123",
     "extra": {
       "eas": {
-        "projectId": "070de9a4-c940-4115-ba5e-2ff9c4b7c26a"
+        "projectId": "58af7df8-b5c1-471f-8ce3-35506c1ff79a"
       }
-    },
-    "owner": "saaho123s-team"
+    }
   }
 }

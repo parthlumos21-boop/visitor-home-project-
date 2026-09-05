@@ -8,7 +8,7 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [totalVisits, pendingApprovals, currentlyInside, appointmentsToday, admin] = await Promise.all([
+    const [totalVisits, pendingApprovals, currentlyInside, appointmentsToday, admin, totalEmployees, employeesByDeptRaw] = await Promise.all([
       prisma.newAppointment.count(),
       prisma.newAppointment.count({
         where: { status: 'REGISTERED' },
@@ -31,7 +31,22 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
             select: { name: true },
           })
         : null,
+      prisma.user.count({
+        where: { role: Role.EMPLOYEE, status: 'ACTIVE' }
+      }),
+      (prisma.user as any).groupBy({
+        by: ['department'],
+        where: { role: Role.EMPLOYEE, status: 'ACTIVE', department: { not: null } },
+        _count: { id: true }
+      })
     ]);
+
+    const employeesByDept: Record<string, number> = {};
+    (employeesByDeptRaw as any[]).forEach((dept: any) => {
+      if (dept.department) {
+        employeesByDept[dept.department] = dept._count.id;
+      }
+    });
 
     res.json({
       totalVisits,
@@ -39,6 +54,8 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
       currentlyInside,
       appointmentsToday,
       adminName: admin?.name || 'Admin User',
+      totalEmployees,
+      employeesByDept
     });
   } catch (error) {
     console.error('Admin dashboard error:', error);
@@ -46,24 +63,3 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
   }
 };
 
-export const getEmployees = async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const employees = await prisma.user.findMany({
-      where: {
-        role: Role.EMPLOYEE,
-        status: 'ACTIVE',
-      },
-      orderBy: { name: 'asc' },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
-    });
-
-    res.json(employees);
-  } catch (error) {
-    console.error('Admin employees error:', error);
-    res.status(500).json({ error: 'Failed to fetch employees' });
-  }
-};

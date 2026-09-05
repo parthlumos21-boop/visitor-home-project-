@@ -105,7 +105,7 @@ export default function VisitorsScreen() {
                 <X color="#374151" size={22} />
               </TouchableOpacity>
             </View>
-            <ScrollView contentContainerStyle={{ padding: 16 }}>
+            <ScrollView className="shrink" contentContainerStyle={{ padding: 16 }}>
               <View className="items-center">
                 <View className="h-14 w-14 items-center justify-center rounded-lg bg-blue-50">
                   <User color="#2563eb" size={28} />

@@ -6,6 +6,8 @@ export interface AdminDashboardStats {
   currentlyInside: number;
   appointmentsToday: number;
   adminName: string;
+  totalEmployees?: number;
+  employeesByDept?: Record<string, number>;
 }
 
 export interface AdminEmployee {

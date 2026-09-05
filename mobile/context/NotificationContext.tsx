@@ -21,7 +21,6 @@ if (canUseExpoNotifications) {
   import('expo-notifications').then((Notifications) => {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
-        shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
         shouldShowBanner: true,
@@ -30,14 +29,16 @@ if (canUseExpoNotifications) {
     });
 
     if (Platform.OS === 'android') {
-      Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
+      Notifications.setNotificationChannelAsync('max', {
+        name: 'max',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
         sound: 'default',
-      }).catch(e => console.log('Could not configure notification channel', e));
+      }).then(() => {
+        console.log('✅ [NotificationContext] Verified channel [max] is active for status bar drops!');
+      }).catch(e => console.log('❌ Could not configure notification channel', e));
     }
   }).catch(e => console.log('Could not load expo-notifications', e));
 }

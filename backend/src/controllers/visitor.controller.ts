@@ -111,6 +111,23 @@ export const createVisitor = async (req: Request, res: Response): Promise<void> 
       });
     }
 
+    // Notify the Visitor that Admin created their profile
+    const adminName = (req as any).user?.name || 'Keval V Shah';
+    const newVisitorUser = await prisma.user.findUnique({
+      where: { phone }
+    });
+
+    if (newVisitorUser) {
+      await NotificationService.sendNotification({
+        type: 'VISITOR_REGISTERED_BY_ADMIN',
+        title: 'Registration Complete',
+        message: `You have been registered by Admin ${adminName}.`,
+        recipientId: newVisitorUser.id,
+        channelId: 'max',
+        priority: 'high'
+      });
+    }
+
     res.status(201).json(visitor);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create visitor' });

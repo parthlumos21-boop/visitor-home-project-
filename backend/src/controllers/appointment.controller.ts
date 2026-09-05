@@ -60,6 +60,12 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
 
     // Send notification strictly to Admin (Keval V Shah) via Dispatcher
     await NotificationService.notifyAdminOfNewAppointment(appointment);
+    
+    // Also send push notification to the Employee (Host)
+    await NotificationService.notifyHostOfNewAppointment(appointment);
+
+    // Also send push notification to the Visitor if they are a registered user
+    await NotificationService.notifyVisitorOfNewAppointment(appointment);
 
     res.status(201).json(appointment);
   } catch (error) {
@@ -93,11 +99,29 @@ export const approveNewAppointment = async (req: Request, res: Response): Promis
       },
     });
 
+    const approverName = (req as any).user?.name || 'Keval V Shah';
+
     // Notify the specific Employee (personToMeet) via Dispatcher
     await NotificationService.notifyHostOfAppointmentApproval(appointment);
 
     // Notify the Visitor via Dispatcher
-    await NotificationService.notifyVisitorOfApproval(appointment);
+    await NotificationService.notifyVisitorOfApproval(appointment, approverName);
+
+    // Notify Admin (Keval V Shah) that someone approved it
+    const adminUsers = await prisma.user.findMany({
+      where: { role: 'SUPER_ADMIN', status: 'ACTIVE' },
+      select: { id: true }
+    });
+    for (const adminUser of adminUsers) {
+      await NotificationService.sendNotification({
+        type: 'APPOINTMENT_APPROVED_ADMIN',
+        title: 'Appointment Approved',
+        message: `${appointment.fullName}'s appointment was approved by ${approverName}.`,
+        recipientId: adminUser.id,
+        channelId: 'max',
+        priority: 'high'
+      });
+    }
 
     console.log('[New Appointment Approved]', JSON.stringify({
       appointmentId: appointment.appointmentId,
@@ -134,7 +158,14 @@ export const rejectNewAppointment = async (req: Request, res: Response): Promise
 
     // Notify the specific Employee (personToMeet)
     const employeeUser = await prisma.user.findFirst({
-      where: { name: appointment.personToMeet, role: 'EMPLOYEE' },
+      where: {
+        role: 'EMPLOYEE',
+        status: 'ACTIVE',
+        OR: [
+          { id: appointment.personToMeet },
+          { name: appointment.personToMeet }
+        ]
+      },
       select: { id: true, role: true }
     });
 
