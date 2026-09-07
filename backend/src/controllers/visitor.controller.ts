@@ -36,8 +36,41 @@ export const createVisitorRequest = async (req: Request, res: Response): Promise
         purpose,
         scheduledAt: new Date(scheduledAt),
         status: VisitStatus.PENDING
+      },
+      include: {
+        visitor: true,
+        host: true
       }
     });
+
+    if (visit.host) {
+      await NotificationService.sendNotification({
+        type: 'NEW_VISITOR_REQUEST',
+        title: 'New Visitor Request',
+        message: `${visit.visitor.name} has requested a visit.\n${visit.displayId}`,
+        visitorId: visit.displayId,
+        recipientId: visit.host.id,
+        recipientRole: visit.host.role,
+        targetScreen: 'Approval',
+      });
+    }
+
+    const adminUser = await prisma.user.findFirst({
+      where: { role: 'SUPER_ADMIN', status: 'ACTIVE' }
+    });
+
+    if (adminUser) {
+      await NotificationService.sendNotification({
+        type: 'NEW_VISITOR_REQUEST',
+        title: 'New Visitor Request',
+        message: `${visit.visitor.name} has requested a visit.\n${visit.displayId}`,
+        visitorId: visit.displayId,
+        recipientId: adminUser.id,
+        recipientRole: adminUser.role,
+        targetScreen: 'Approval',
+      });
+    }
+
     res.status(201).json(visit);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create request' });

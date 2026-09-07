@@ -1,6 +1,6 @@
 /// <reference types="nativewind/types" />
 import React, { useState } from 'react';
-import { View, Text, Alert, ScrollView } from 'react-native';
+import { View, Text, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import axios from 'axios';
 import { Link } from 'expo-router';
 import { InputField } from '../../components/InputField';
@@ -16,7 +16,9 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [role, setRole] = useState<'visitor' | 'employee'>('visitor');
   const { setAuth } = useAuthStore();
+  
   const normalizedEmail = email.trim().toLowerCase();
   const isAdminEmail = normalizedEmail === ADMIN_EMAIL;
   const isAdminEmailTyping = normalizedEmail.length > 0 && ADMIN_EMAIL.startsWith(normalizedEmail);
@@ -45,7 +47,7 @@ export default function LoginScreen() {
         screen: 'Login',
         action: 'Sign In',
         message: 'Login attempt started',
-        metadata: { email: normalizedEmail },
+        metadata: { email: normalizedEmail, selectedRole: role },
       });
       const data = await loginUser(normalizedEmail, password);
       await setAuth(data.user, data.token);
@@ -101,7 +103,26 @@ export default function LoginScreen() {
   return (
     <ScrollView className="flex-1 bg-white" contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 40, justifyContent: 'center', flexGrow: 1 }}>
       <View className="mb-8 mt-10">
-        <Text className="text-3xl font-bold text-gray-900 mb-2">{showAdminPreview ? 'Admin' : 'Visitor Gate'}</Text>
+        {!showAdminPreview ? (
+          <View className="flex-row bg-gray-100 p-1 rounded-xl mb-6">
+            <TouchableOpacity 
+              className={`flex-1 py-2 rounded-lg items-center ${role === 'visitor' ? 'bg-white shadow-sm' : ''}`}
+              onPress={() => setRole('visitor')}
+            >
+              <Text className={`font-semibold ${role === 'visitor' ? 'text-blue-600' : 'text-gray-500'}`}>Visitor</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              className={`flex-1 py-2 rounded-lg items-center ${role === 'employee' ? 'bg-white shadow-sm' : ''}`}
+              onPress={() => setRole('employee')}
+            >
+              <Text className={`font-semibold ${role === 'employee' ? 'text-blue-600' : 'text-gray-500'}`}>Employee</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        <Text className="text-3xl font-bold text-gray-900 mb-2">
+          {showAdminPreview ? 'Admin' : (role === 'employee' ? 'Employee Portal' : 'Visitor Gate')}
+        </Text>
         <Text className="text-gray-500 text-lg">
           {showAdminPreview ? 'Sign in as super admin' : 'Sign in to your account'}
         </Text>

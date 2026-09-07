@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, Users, CalendarPlus, Bell, User } from 'lucide-react-native';
+import { LayoutDashboard, Users, CalendarPlus, Bell, User } from 'lucide-react-native';
 import { View, Text } from 'react-native';
 import { useNotifications } from '../../context/NotificationContext';
 
@@ -8,14 +8,16 @@ export default function EmployeeLayout() {
   return (
     <Tabs screenOptions={{ 
       tabBarActiveTintColor: '#2563eb',
-      headerShown: true,
+      tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+      tabBarItemStyle: { paddingVertical: 4 },
+      headerShown: false,
       headerTitleStyle: { fontWeight: 'bold' }
     }}>
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <Home color={color} size={24} />,
+          title: 'Dashboard',
+          tabBarIcon: ({ color }) => <LayoutDashboard color={color} size={24} />,
         }}
       />
       <Tabs.Screen
