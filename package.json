@@ -19,6 +19,10 @@
     "doctor:mobile-network:fix": "npm --workspace=mobile run doctor:network:fix",
     "start:mobile:tunnel": "npm --workspace=mobile run start:tunnel -- -c",
     "start:mobile:clean": "npm --workspace=mobile run start -- -c",
+    "start:mobile:ios": "npm --workspace=mobile run start:ios",
+    "start:mobile:tablet": "npm --workspace=mobile run start:tablet",
+    "start:mobile:offline": "npm --workspace=mobile run start:offline",
+    "start:mobile:web": "npm --workspace=mobile run web:8082",
     "dev:frontend": "npm --workspace=frontend run dev"
   },
   "overrides": {

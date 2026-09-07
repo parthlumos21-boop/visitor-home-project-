@@ -24,6 +24,8 @@ if ($useDevClient) {
   $expoArgs += '--dev-client'
 } else {
   $expoArgs += '--go'
+  # Use one Expo Go QR link for both iOS and Android.
+  $expoArgs += '--scheme', 'exp'
 }
 
 $expoArgs += $ExtraArgs

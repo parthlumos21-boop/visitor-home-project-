@@ -44,7 +44,13 @@
   },
   "scripts": {
     "start": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-expo-8082.ps1",
+    "start:clean": "npm start -- -c",
+    "start:ios": "expo start --go --lan --port 8082 --scheme exp",
+    "start:mobile:ios": "npm run start:ios",
+    "start:tablet": "expo start --web --lan --port 8082",
+    "start:offline": "expo start --go --port 8082 --offline",
     "start:lan": "npm start",
+    "web:8082": "expo start --web --port 8082",
     "start:tunnel": "npm start -- --tunnel",
     "start:go": "npm start -- --go -c",
     "doctor:network": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/network-doctor.ps1",

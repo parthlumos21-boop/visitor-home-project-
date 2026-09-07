@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, RefreshControl, ActivityIndicator, useWindowDimensions, Modal, Pressable } from 'react-native';
-import { Users, Clock, History, CalendarPlus, LogOut, Bell, X } from 'lucide-react-native';
+import { Users, Clock, History, CalendarPlus, LogOut, Bell, X, Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getNotifications, AppNotification } from '../../services/notifications';
 import { EmployeeDashboardStats, getEmployeeDashboard } from '../../services/employee';
+import api from '../../services/api';
 
 export default function EmployeeDashboard() {
   const router = useRouter();
@@ -23,12 +24,13 @@ export default function EmployeeDashboard() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
-  const [stats, setStats] = useState<EmployeeDashboardStats>({
+  const [stats, setStats] = useState<EmployeeDashboardStats & { approvals?: number }>({
     myVisitors: 0,
     newVisitors: 0,
     upcoming: 0,
     inside: 0,
     recent: 0,
+    approvals: 0,
   });
 
   const loadDashboard = async () => {
@@ -36,7 +38,17 @@ export default function EmployeeDashboard() {
     setIsLoading(true);
     try {
       const dashboardStats = await getEmployeeDashboard();
-      setStats(dashboardStats);
+      let approvalsCount = 0;
+      if (user?.name) {
+        try {
+          const url = `/new-appointments?all=true&personToMeet=${encodeURIComponent(user.name)}`;
+          const res = await api.get(url);
+          if (Array.isArray(res.data)) {
+            approvalsCount = res.data.length;
+          }
+        } catch (e) {}
+      }
+      setStats({ ...dashboardStats, approvals: approvalsCount });
     } catch (err) {
       setError('Failed to load dashboard data');
     } finally {
@@ -76,6 +88,12 @@ export default function EmployeeDashboard() {
   // Uniform clean color scheme for all cards
   const cards = [
     {
+      title: 'Approvals',
+      value: stats.approvals || 0,
+      icon: <Check color="#2563eb" size={22} />,
+      onPress: () => router.push('/(employee)/approvals'),
+    },
+    {
       title: 'New Visitor',
       value: stats.newVisitors,
       icon: <CalendarPlus color="#2563eb" size={22} />,
@@ -101,8 +119,8 @@ export default function EmployeeDashboard() {
     }
   ];
 
-  const numColumns = width >= 900 ? 4 : 2;
-  const gap = 12;
+    const numColumns = width >= 1024 ? 4 : width >= 768 ? 3 : 2;
+    const gap = 12;
   const padding = width >= 768 ? 48 : 32;
   const availableWidth = width - padding - (numColumns - 1) * gap;
   const cardWidth = Math.max(140, availableWidth / numColumns);
@@ -112,10 +130,7 @@ export default function EmployeeDashboard() {
       {/* Sticky Header */}
       <View className="bg-white border-b border-gray-200 px-4 pb-3" style={{ paddingTop: insets.top + 8 }}>
         <View className="flex-row items-center justify-between">
-          <View className="flex-1">
-            <Text className="text-xl font-bold text-gray-950">Welcome, {employeeName}</Text>
-          </View>
-
+          <Text className="flex-1 text-lg font-bold text-gray-950">Employee</Text>
           <TouchableOpacity
             onPress={handleOpenNotifications}
             className="h-11 w-11 items-center justify-center rounded-full bg-gray-100 mr-2"
@@ -137,6 +152,7 @@ export default function EmployeeDashboard() {
         contentContainerStyle={{ padding: width >= 768 ? 24 : 16, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />}
       >
+        <Text className="text-xl font-bold text-gray-950">Welcome, {employeeName}</Text>
         <Text className="mt-1 text-base text-gray-600">Here is your daily summary</Text>
 
         {isLoading ? (

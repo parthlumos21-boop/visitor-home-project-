@@ -14,10 +14,11 @@ import { CalendarDays, Check, Clock, Eye, Hourglass, User, X, ChevronRight } fro
 import { useLocalSearchParams } from 'expo-router';
 import {
   approveNewAppointment,
-  getNewAppointments,
   rejectNewAppointment,
 } from '../../services/appointments';
+import api from '../../services/api';
 import { logMobileActivity } from '../../services/activityLogger';
+import { useAuthStore } from '../../store/authStore';
 
 interface NewAppointment {
   id: string;
@@ -35,7 +36,6 @@ interface NewAppointment {
   vehicleNumber?: string | null;
   notes?: string | null;
   status: string;
-  decidedByName?: string | null;
 }
 
 const formatDateLabel = (visitDate: string) => {
@@ -68,22 +68,27 @@ export default function ApprovalsScreen() {
 
   const params = useLocalSearchParams<{ appointmentId?: string }>();
 
+  const { user } = useAuthStore();
+
   const loadAppointments = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getNewAppointments();
-      setAppointments(data);
+      const url = user?.name 
+        ? `/new-appointments?all=true&personToMeet=${encodeURIComponent(user.name)}` 
+        : `/new-appointments?all=true`;
+      const response = await api.get(url);
+      setAppointments(response.data);
       logMobileActivity({
-        event: 'admin_approval_list_loaded',
-        screen: 'Admin Approvals',
+        event: 'employee_approval_list_loaded',
+        screen: 'Employee Approvals',
         message: 'All new appointments loaded',
-        metadata: { count: data.length },
+        metadata: { count: response.data.length },
       });
     } catch (error) {
       Alert.alert('Server Error', 'Unable to load approval requests.');
       logMobileActivity({
-        event: 'admin_approval_list_error',
-        screen: 'Admin Approvals',
+        event: 'employee_approval_list_error',
+        screen: 'Employee Approvals',
         message: 'Unable to load all new appointments',
       });
     } finally {
@@ -119,11 +124,13 @@ export default function ApprovalsScreen() {
   const handleApprove = async (appointment: NewAppointment) => {
     setActionLoading(true);
     try {
-      await approveNewAppointment(appointment.id);
+      const approverId = user?.id || '';
+      const approverName = user?.name || 'Employee';
+      await api.patch(`/new-appointments/${appointment.id}/approve`, { approverId, approverName });
       updateAppointmentStatus(appointment.id, 'APPROVED');
       logMobileActivity({
-        event: 'admin_appointment_approved',
-        screen: 'Admin Approvals',
+        event: 'employee_appointment_approved',
+        screen: 'Employee Approvals',
         action: 'Approve',
         message: 'New appointment approved',
         metadata: {
@@ -161,11 +168,17 @@ export default function ApprovalsScreen() {
 
     setActionLoading(true);
     try {
-      await rejectNewAppointment(rejectTarget.id, rejectReason);
+      const approverId = user?.id || '';
+      const approverName = user?.name || 'Employee';
+      await api.patch(`/new-appointments/${rejectTarget.id}/reject`, { 
+        reason: rejectReason, 
+        approverId, 
+        approverName 
+      });
       updateAppointmentStatus(rejectTarget.id, 'REJECTED');
       logMobileActivity({
-        event: 'admin_appointment_rejected',
-        screen: 'Admin Approvals',
+        event: 'employee_appointment_rejected',
+        screen: 'Employee Approvals',
         action: 'Reject',
         message: 'New appointment rejected',
         metadata: {
@@ -229,11 +242,11 @@ export default function ApprovalsScreen() {
                 return (
                   <View key={appointment.id} className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                     <View className="mb-3 flex-row items-start justify-between border-b border-gray-100 pb-3">
-                        <View className="flex-1 pr-3">
-                          <Text className="text-lg font-bold text-emerald-700 uppercase">{appointment.fullName} APPROVED</Text>
-                          <Text className="mt-1 text-xs text-emerald-600">Approved by: {appointment.decidedByName || 'Admin'}</Text>
-                          <View className="mt-2 flex-row items-center">
-                            <Clock color="#6b7280" size={16} />
+                      <View className="flex-1 pr-3">
+                        <Text className="text-lg font-bold text-emerald-700 uppercase">{appointment.fullName} APPROVED</Text>
+                        <Text className="mt-1 text-xs text-emerald-600">Approved by: {appointment.decidedByName || 'Admin'}</Text>
+                        <View className="mt-2 flex-row items-center">
+                          <Clock color="#6b7280" size={16} />
                           <Text className="ml-2 text-sm font-semibold text-gray-600">
                             {appointment.arrivalTime || 'Time TBD'}
                           </Text>

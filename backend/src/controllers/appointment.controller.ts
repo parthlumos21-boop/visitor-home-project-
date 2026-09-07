@@ -77,8 +77,13 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
 export const getNewAppointments = async (req: Request, res: Response): Promise<void> => {
   try {
     const showAll = req.query.all === 'true';
+    const personToMeet = req.query.personToMeet as string | undefined;
+
     const appointments = await prisma.newAppointment.findMany({
-      where: showAll ? undefined : { status: 'REGISTERED' },
+      where: {
+        ...(showAll ? {} : { status: 'REGISTERED' }),
+        ...(personToMeet ? { personToMeet: personToMeet } : {})
+      },
       orderBy: { createdAt: 'desc' },
     });
     res.json(appointments);
@@ -90,16 +95,19 @@ export const getNewAppointments = async (req: Request, res: Response): Promise<v
 export const approveNewAppointment = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = String(req.params.id);
+    const { approverId, approverName } = req.body || {};
+    const finalApproverName = approverName || (req as any).user?.name || 'Keval V Shah';
+
     const appointment = await prisma.newAppointment.update({
       where: { id },
       data: {
         status: 'APPROVED',
         rejectionReason: null,
         decidedAt: new Date(),
+        decidedBy: approverId || (req as any).user?.id || null,
+        decidedByName: finalApproverName,
       },
     });
-
-    const approverName = (req as any).user?.name || 'Keval V Shah';
 
     // Notify the specific Employee (personToMeet) via Dispatcher
     await NotificationService.notifyHostOfAppointmentApproval(appointment);
@@ -140,12 +148,14 @@ export const approveNewAppointment = async (req: Request, res: Response): Promis
 export const rejectNewAppointment = async (req: Request, res: Response): Promise<void> => {
   try {
     const id = String(req.params.id);
-    const { reason } = req.body || {};
+    const { reason, approverId, approverName } = req.body || {};
 
     if (!requiredString(reason)) {
       res.status(400).json({ error: 'Rejection reason is required' });
       return;
     }
+
+    const finalApproverName = approverName || (req as any).user?.name || 'Keval V Shah';
 
     const appointment = await prisma.newAppointment.update({
       where: { id },
@@ -153,6 +163,8 @@ export const rejectNewAppointment = async (req: Request, res: Response): Promise
         status: 'REJECTED',
         rejectionReason: reason.trim(),
         decidedAt: new Date(),
+        decidedBy: approverId || (req as any).user?.id || null,
+        decidedByName: finalApproverName,
       },
     });
 
