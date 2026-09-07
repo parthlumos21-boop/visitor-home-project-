@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import { ChevronDown, X, ArrowLeft, Calendar, User, Clock, FileText } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CustomButton } from '../../components/CustomButton';
+import { createEmployeeInvitation } from '../../services/employee';
+import { getApiErrorMessage } from '../../services/errorMessage';
 
 // Reusable Select Component
 const SelectField = ({ label, value, options, onSelect, placeholder }: any) => {
@@ -79,6 +81,19 @@ export default function EmployeeInvitations() {
   const purposes = ['Meeting', 'Interview', 'Delivery', 'Maintenance', 'Other'];
   const validForOptions = ['Short Visit', '1 Hour', '2 Hours', '4 Hours', 'Full Day', 'Custom'];
 
+  const resetForm = () => {
+    setFullName('');
+    setMobileNumber('');
+    setEmailAddress('');
+    setCompanyName('');
+    setVisitorType('');
+    setPurpose('');
+    setValidFor('');
+    setNotes('');
+    setAppointmentDate(new Date());
+    setArrivalTime('');
+  };
+
   const handleSendInvitation = async () => {
     if (!fullName || !mobileNumber || !visitorType || !purpose || !validFor || !arrivalTime) {
       Alert.alert('Missing Fields', 'Please fill in all required fields marked with *');
@@ -87,12 +102,30 @@ export default function EmployeeInvitations() {
 
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      Alert.alert('Success', 'Invitation sent successfully!');
-      router.push('/(employee)/dashboard');
+      await createEmployeeInvitation({
+        fullName: fullName.trim(),
+        mobile: mobileNumber.trim(),
+        email: emailAddress.trim() || undefined,
+        company: companyName.trim() || undefined,
+        visitorType,
+        purpose,
+        visitDate: appointmentDate.toISOString(),
+        arrivalTime,
+        validFor,
+        notes: notes.trim() || undefined,
+      });
+      Alert.alert('Success', 'New visitor saved successfully.', [
+        {
+          text: 'Add Another',
+          onPress: resetForm,
+        },
+        {
+          text: 'Dashboard',
+          onPress: () => router.push('/(employee)/dashboard'),
+        },
+      ]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to send invitation.');
+      Alert.alert('Error', getApiErrorMessage(error, 'Failed to send invitation.'));
     } finally {
       setIsLoading(false);
     }

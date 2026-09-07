@@ -127,8 +127,7 @@ export default function AdminDashboard() {
     <View className="flex-1 bg-gray-50">
       <View className="bg-white border-b border-gray-200 px-4 pb-3" style={{ paddingTop: insets.top + 8 }}>
         <View className="flex-row items-center justify-between">
-          <Text className="flex-1 text-xl font-bold text-gray-950">Admin</Text>
-
+          <Text className="flex-1 text-lg font-bold text-gray-950">Admin</Text>
           <TouchableOpacity
             onPress={handleOpenNotifications}
             accessibilityRole="button"
@@ -156,7 +155,7 @@ export default function AdminDashboard() {
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />}
       >
-        <Text className="text-2xl font-bold text-gray-950">Good Morning, {adminName || 'Admin'}</Text>
+        <Text className="text-xl font-bold text-gray-950">Welcome, {adminName || 'Admin'}</Text>
         <Text className="mt-1 text-base text-gray-600">Manage visitors and appointments</Text>
 
         {isLoading ? (

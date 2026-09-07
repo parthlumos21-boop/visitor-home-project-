@@ -22,8 +22,9 @@ const getExpoHost = () => {
 const androidLocalUrls =
   Platform.OS === 'android'
     ? [
-        withApiPath('localhost'),
+        withApiPath('192.168.10.161'),
         withApiPath('10.0.2.2'),
+        withApiPath('localhost'),
       ]
     : [];
 

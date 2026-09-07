@@ -227,8 +227,16 @@ export default function ApprovalsScreen() {
               if (activeTab === 'APPROVED') {
                 return (
                   <View key={appointment.id} className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                    <View className="mb-3 border-b border-gray-100 pb-3 flex-row justify-between items-center">
-                      <Text className="text-lg font-bold text-emerald-700 uppercase">{appointment.fullName} APPROVED</Text>
+                    <View className="mb-3 flex-row items-start justify-between border-b border-gray-100 pb-3">
+                      <View className="flex-1 pr-3">
+                        <Text className="text-lg font-bold text-emerald-700 uppercase">{appointment.fullName} APPROVED</Text>
+                        <View className="mt-2 flex-row items-center">
+                          <Clock color="#6b7280" size={16} />
+                          <Text className="ml-2 text-sm font-semibold text-gray-600">
+                            {appointment.arrivalTime || 'Time TBD'}
+                          </Text>
+                        </View>
+                      </View>
                     </View>
                     
                     <Text className="text-sm font-semibold text-gray-500 mb-4">Appointment ID: {appointment.appointmentId}</Text>
@@ -402,14 +410,20 @@ export default function ApprovalsScreen() {
                 </View>
 
                 <View className="mt-5 rounded-md bg-gray-50 p-4">
-                  <View className="flex-row items-center">
-                    <CalendarDays color="#6b7280" size={18} />
-                    <Text className="ml-2 text-sm font-semibold text-gray-700">
-                      {detailsTarget ? formatDateLabel(detailsTarget.visitDate) : ''}
-                    </Text>
-                    <Text className="mx-3 text-gray-400">-</Text>
-                    <Clock color="#6b7280" size={18} />
-                    <Text className="ml-2 text-sm font-semibold text-gray-700">{detailsTarget?.arrivalTime || 'Time TBD'}</Text>
+                  <View className="flex-row items-start">
+                    <View className="flex-1 flex-row items-center">
+                      <CalendarDays color="#6b7280" size={18} />
+                      <Text className="ml-2 flex-1 text-sm font-semibold text-gray-700">
+                        {detailsTarget ? formatDateLabel(detailsTarget.visitDate) : ''}
+                      </Text>
+                    </View>
+                    <Text className="mx-2 text-gray-400">-</Text>
+                    <View className="flex-1 flex-row items-center">
+                      <Clock color="#6b7280" size={18} />
+                      <Text className="ml-2 flex-1 text-sm font-semibold text-gray-700">
+                        {detailsTarget?.arrivalTime || 'Time TBD'}
+                      </Text>
+                    </View>
                   </View>
                   <View className="mt-3 flex-row items-center">
                     <User color="#6b7280" size={18} />

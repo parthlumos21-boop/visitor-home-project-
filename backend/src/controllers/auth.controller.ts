@@ -5,6 +5,39 @@ import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'visitor_gate_secret';
 
+export const previewLoginUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const email = String(req.query.email || '').trim().toLowerCase();
+    if (!email) {
+      res.status(400).json({ error: 'Email is required' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        name: true,
+        role: true,
+        status: true,
+      },
+    });
+
+    if (!user || user.status !== 'ACTIVE') {
+      res.json({ exists: false });
+      return;
+    }
+
+    res.json({
+      exists: true,
+      name: user.name,
+      role: user.role,
+    });
+  } catch (error) {
+    console.error('Login preview error:', error);
+    res.status(500).json({ error: 'Failed to preview login user' });
+  }
+};
+
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;

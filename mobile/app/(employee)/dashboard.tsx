@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, RefreshControl, ActivityIndicator, useWindowDimensions, Modal, Pressable } from 'react-native';
-import { Users, Clock, History, CalendarPlus, LogOut, Bell, X, CheckCircle, LayoutDashboard } from 'lucide-react-native';
+import { Users, Clock, History, CalendarPlus, LogOut, Bell, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getNotifications, Notification } from '../../services/notifications';
+import { getNotifications, AppNotification } from '../../services/notifications';
+import { EmployeeDashboardStats, getEmployeeDashboard } from '../../services/employee';
 
 export default function EmployeeDashboard() {
   const router = useRouter();
@@ -19,23 +20,23 @@ export default function EmployeeDashboard() {
 
   const [isLogoutVisible, setLogoutVisible] = useState(false);
   const [isNotificationsVisible, setNotificationsVisible] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
-  // Mock stats - in reality these would come from an API endpoint
-  const stats = {
-    waiting: 2,
-    upcoming: 5,
-    inside: 1,
-    recent: 12
-  };
+  const [stats, setStats] = useState<EmployeeDashboardStats>({
+    myVisitors: 0,
+    newVisitors: 0,
+    upcoming: 0,
+    inside: 0,
+    recent: 0,
+  });
 
   const loadDashboard = async () => {
     setError(null);
     setIsLoading(true);
     try {
-      // Simulate API call for stats
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const dashboardStats = await getEmployeeDashboard();
+      setStats(dashboardStats);
     } catch (err) {
       setError('Failed to load dashboard data');
     } finally {
@@ -75,28 +76,22 @@ export default function EmployeeDashboard() {
   // Uniform clean color scheme for all cards
   const cards = [
     {
-      title: 'Invite Visitor',
-      value: '+',
+      title: 'New Visitor',
+      value: stats.newVisitors,
       icon: <CalendarPlus color="#2563eb" size={22} />,
       onPress: () => router.push('/(employee)/invitations'),
     },
     {
-      title: 'Waiting for Me',
-      value: stats.waiting,
+      title: 'My Visitors',
+      value: stats.myVisitors,
       icon: <Clock color="#2563eb" size={22} />,
-      onPress: () => router.push('/(employee)/visitors?filter=waiting'),
+      onPress: () => router.push('/(employee)/visitors?filter=my'),
     },
     {
       title: 'Upcoming Today',
       value: stats.upcoming,
       icon: <Users color="#2563eb" size={22} />,
       onPress: () => router.push('/(employee)/visitors?filter=upcoming'),
-    },
-    {
-      title: 'Currently Inside',
-      value: stats.inside,
-      icon: <CheckCircle color="#2563eb" size={22} />,
-      onPress: () => router.push('/(employee)/visitors?filter=inside'),
     },
     {
       title: 'Recent Visits',
@@ -106,18 +101,20 @@ export default function EmployeeDashboard() {
     }
   ];
 
-  const numColumns = width >= 1024 ? 4 : width >= 768 ? 3 : 2;
+  const numColumns = width >= 900 ? 4 : 2;
   const gap = 12;
-  const padding = 32;
+  const padding = width >= 768 ? 48 : 32;
   const availableWidth = width - padding - (numColumns - 1) * gap;
-  const cardWidth = availableWidth / numColumns;
+  const cardWidth = Math.max(140, availableWidth / numColumns);
 
   return (
     <View className="flex-1 bg-gray-50">
       {/* Sticky Header */}
       <View className="bg-white border-b border-gray-200 px-4 pb-3" style={{ paddingTop: insets.top + 8 }}>
         <View className="flex-row items-center justify-between">
-          <Text className="flex-1 text-xl font-bold text-gray-950">Employee</Text>
+          <View className="flex-1">
+            <Text className="text-xl font-bold text-gray-950">Welcome, {employeeName}</Text>
+          </View>
 
           <TouchableOpacity
             onPress={handleOpenNotifications}
@@ -137,10 +134,9 @@ export default function EmployeeDashboard() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ padding: width >= 768 ? 24 : 16, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />}
       >
-        <Text className="text-2xl font-bold text-gray-950">Good Morning, {employeeName}</Text>
         <Text className="mt-1 text-base text-gray-600">Here is your daily summary</Text>
 
         {isLoading ? (
@@ -156,7 +152,7 @@ export default function EmployeeDashboard() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View className="mt-6 flex-row flex-wrap" style={{ gap }}>
+          <View className="mt-6 flex-row flex-wrap justify-center" style={{ gap }}>
             {cards.map((card) => (
               <TouchableOpacity
                 key={card.title}
@@ -170,11 +166,7 @@ export default function EmployeeDashboard() {
                 </View>
                 <Text className="min-h-[40px] text-sm font-semibold leading-5 text-gray-700">{card.title}</Text>
                 <View className="flex-1 justify-end">
-                  {card.value === '+' ? (
-                    <Text className="text-3xl font-bold text-gray-950">+</Text>
-                  ) : (
-                    <Text className="text-3xl font-bold text-gray-950">{String(card.value).padStart(2, '0')}</Text>
-                  )}
+                  <Text className="text-3xl font-bold text-gray-950">{String(card.value).padStart(2, '0')}</Text>
                   <Text className="mt-2 text-sm font-semibold text-blue-700">View -&gt;</Text>
                 </View>
               </TouchableOpacity>

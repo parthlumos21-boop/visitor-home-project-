@@ -68,9 +68,9 @@ export default function VisitorDashboard() {
         </TouchableOpacity>
       </View>
 
-      {/* Welcome Card */}
+      {/* Visitor summary */}
       <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
-        <Text className="text-xl font-bold text-gray-900 mb-2">Welcome, {user?.name || 'Visitor'} 👋</Text>
+        <Text className="text-xl font-bold text-gray-900 mb-2">Welcome, {user?.name || 'Visitor'}</Text>
         <Text className="text-sm font-semibold text-gray-800 mb-1">Your Visitor Dashboard</Text>
         <Text className="text-xs text-gray-500">Manage your appointments.</Text>
       </View>

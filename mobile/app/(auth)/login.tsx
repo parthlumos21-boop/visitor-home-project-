@@ -1,12 +1,12 @@
 /// <reference types="nativewind/types" />
-import React, { useState } from 'react';
-import { View, Text, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, Alert, ScrollView } from 'react-native';
 import axios from 'axios';
 import { Link } from 'expo-router';
 import { InputField } from '../../components/InputField';
 import { CustomButton } from '../../components/CustomButton';
 import { useAuthStore } from '../../store/authStore';
-import { loginUser } from '../../services/auth';
+import { LoginPreview, loginUser, previewLoginUser } from '../../services/auth';
 import { logMobileActivity } from '../../services/activityLogger';
 
 const ADMIN_EMAIL = 'keval@swatiswitchgears.com';
@@ -16,13 +16,45 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const [role, setRole] = useState<'visitor' | 'employee'>('visitor');
+  const [loginPreview, setLoginPreview] = useState<LoginPreview | null>(null);
   const { setAuth } = useAuthStore();
   
   const normalizedEmail = email.trim().toLowerCase();
   const isAdminEmail = normalizedEmail === ADMIN_EMAIL;
   const isAdminEmailTyping = normalizedEmail.length > 0 && ADMIN_EMAIL.startsWith(normalizedEmail);
   const showAdminPreview = isAdminEmail || isAdminEmailTyping;
+  const heading = useMemo(() => {
+    if (showAdminPreview) return 'Admin';
+    if (loginPreview?.exists && loginPreview.role === 'EMPLOYEE') return 'Employee login';
+    if (loginPreview?.exists && loginPreview.role) return `${loginPreview.role.replace('_', ' ')} login`;
+    if (loginPreview?.exists && loginPreview.name) return loginPreview.name;
+    return 'Visitor Gate';
+  }, [loginPreview, showAdminPreview]);
+  const subheading = useMemo(() => {
+    if (showAdminPreview) return 'Sign in as super admin';
+    if (loginPreview?.exists && loginPreview.name) return loginPreview.name;
+    return 'Sign in to your account';
+  }, [loginPreview, showAdminPreview]);
+
+  useEffect(() => {
+    setLoginPreview(null);
+    if (!normalizedEmail || !normalizedEmail.includes('@')) return;
+
+    let isActive = true;
+    const timeout = setTimeout(async () => {
+      try {
+        const preview = await previewLoginUser(normalizedEmail);
+        if (isActive) setLoginPreview(preview);
+      } catch (error) {
+        if (isActive) setLoginPreview(null);
+      }
+    }, 350);
+
+    return () => {
+      isActive = false;
+      clearTimeout(timeout);
+    };
+  }, [normalizedEmail]);
 
   const handleLogin = async () => {
     setLoginError('');
@@ -47,7 +79,7 @@ export default function LoginScreen() {
         screen: 'Login',
         action: 'Sign In',
         message: 'Login attempt started',
-        metadata: { email: normalizedEmail, selectedRole: role },
+        metadata: { email: normalizedEmail },
       });
       const data = await loginUser(normalizedEmail, password);
       await setAuth(data.user, data.token);
@@ -103,28 +135,11 @@ export default function LoginScreen() {
   return (
     <ScrollView className="flex-1 bg-white" contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 40, justifyContent: 'center', flexGrow: 1 }}>
       <View className="mb-8 mt-10">
-        {!showAdminPreview ? (
-          <View className="flex-row bg-gray-100 p-1 rounded-xl mb-6">
-            <TouchableOpacity 
-              className={`flex-1 py-2 rounded-lg items-center ${role === 'visitor' ? 'bg-white shadow-sm' : ''}`}
-              onPress={() => setRole('visitor')}
-            >
-              <Text className={`font-semibold ${role === 'visitor' ? 'text-blue-600' : 'text-gray-500'}`}>Visitor</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              className={`flex-1 py-2 rounded-lg items-center ${role === 'employee' ? 'bg-white shadow-sm' : ''}`}
-              onPress={() => setRole('employee')}
-            >
-              <Text className={`font-semibold ${role === 'employee' ? 'text-blue-600' : 'text-gray-500'}`}>Employee</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
-
         <Text className="text-3xl font-bold text-gray-900 mb-2">
-          {showAdminPreview ? 'Admin' : (role === 'employee' ? 'Employee Portal' : 'Visitor Gate')}
+          {heading}
         </Text>
         <Text className="text-gray-500 text-lg">
-          {showAdminPreview ? 'Sign in as super admin' : 'Sign in to your account'}
+          {subheading}
         </Text>
         {showAdminPreview ? (
           <Text className="mt-2 text-sm font-semibold text-blue-700">{ADMIN_EMAIL}</Text>
