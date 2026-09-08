@@ -1,4 +1,4 @@
-import api from './api';
+﻿import api from './api';
 
 export interface AdminDashboardStats {
   totalVisits: number;
@@ -7,6 +7,7 @@ export interface AdminDashboardStats {
   appointmentsToday: number;
   adminName: string;
   totalEmployees?: number;
+  totalSecurity?: number;
   employeesByDept?: Record<string, number>;
 }
 
@@ -25,4 +26,5 @@ export const getAdminEmployees = async (): Promise<AdminEmployee[]> => {
   const response = await api.get('/employees');
   return response.data;
 };
+
 

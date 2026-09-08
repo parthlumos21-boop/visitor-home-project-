@@ -1,4 +1,4 @@
-import { Tabs, useRouter } from 'expo-router';
+﻿import { Tabs, useRouter } from 'expo-router';
 import { Home, Calendar, Bell, User as UserIcon, LogOut, Mail } from 'lucide-react-native';
 import { TouchableOpacity, Text, View, Alert } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
@@ -26,7 +26,7 @@ export default function VisitorLayout() {
                 console.log("Processing logout...");
                 await clearAuth();
                 console.log("Logout successful, redirecting to login...");
-                router.replace('/');
+                router.replace('/(auth)/login');
               } catch (err) {
                 console.error("Error during logout process:", err);
               }
@@ -128,3 +128,4 @@ export default function VisitorLayout() {
     </Tabs>
   );
 }
+

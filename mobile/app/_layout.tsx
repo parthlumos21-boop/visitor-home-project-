@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { NetworkProvider } from '../store/NetworkContext';
@@ -32,6 +32,12 @@ const toastConfig: ToastConfig = {
 export default function RootLayout() {
   const { user, token, isLoading, initializeAuth } = useAuthStore();
   const segments = useSegments();
+  const [isReady, setIsReady] = useState(false);
+
+  // Wait until root layout mounts
+  useEffect(() => {
+    setIsReady(true);
+  }, []);
   const router = useRouter();
 
   useEffect(() => {
@@ -83,3 +89,4 @@ export default function RootLayout() {
     </NetworkProvider>
   );
 }
+

@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+﻿import { Tabs } from 'expo-router';
 import { Home, QrCode, Users, History, User } from 'lucide-react-native';
 
 export default function SecurityLayout() {
@@ -11,6 +11,7 @@ export default function SecurityLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
+          headerShown: false,
           title: 'Home',
           tabBarIcon: ({ color }) => <Home color={color} size={24} />,
         }}
@@ -46,3 +47,4 @@ export default function SecurityLayout() {
     </Tabs>
   );
 }
+

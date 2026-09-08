@@ -1,4 +1,4 @@
-import { Response } from 'express';
+﻿import { Response } from 'express';
 import { Role, VisitStatus } from '@prisma/client';
 import { prisma } from '../app';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
@@ -8,7 +8,7 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [totalVisits, pendingApprovals, currentlyInside, appointmentsToday, admin, totalEmployees, employeesByDeptRaw] = await Promise.all([
+    const [totalVisits, pendingApprovals, currentlyInside, appointmentsToday, admin, totalEmployees, employeesByDeptRaw, totalSecurity] = await Promise.all([
       prisma.newAppointment.count(),
       prisma.newAppointment.count({
         where: { status: 'REGISTERED' },
@@ -38,6 +38,9 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
         by: ['department'],
         where: { role: Role.EMPLOYEE, status: 'ACTIVE', department: { not: null } },
         _count: { id: true }
+      }),
+      prisma.user.count({
+        where: { role: Role.SECURITY, status: 'ACTIVE' }
       })
     ]);
 
@@ -55,11 +58,11 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
       appointmentsToday,
       adminName: admin?.name || 'Admin User',
       totalEmployees,
-      employeesByDept
+      employeesByDept,
+      totalSecurity
     });
   } catch (error) {
     console.error('Admin dashboard error:', error);
     res.status(500).json({ error: 'Failed to fetch admin dashboard' });
   }
 };
-

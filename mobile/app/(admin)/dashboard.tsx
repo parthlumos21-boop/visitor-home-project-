@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable, useWindowDimensions, RefreshControl } from 'react-native';
-import { Bell, CalendarDays, Clock, LogOut, UserCheck, Users, X } from 'lucide-react-native';
+import { Bell, CalendarDays, Clock, LogOut, UserCheck, Users, X, Shield } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAdminDashboard, AdminDashboardStats } from '../../services/admin';
@@ -115,6 +115,13 @@ export default function AdminDashboard() {
       onPress: () => router.push('/(admin)/employees'),
       accent: 'bg-sky-50',
     },
+      {
+        title: 'Total Security',
+        value: stats.totalSecurity || 0,
+        icon: <Shield color="#10b981" size={22} />,
+        onPress: () => router.push('/(admin)/security'),
+        accent: 'bg-emerald-50',
+      },
   ];
 
   const numColumns = width >= 1024 ? 4 : width >= 768 ? 3 : 2;
@@ -259,3 +266,7 @@ export default function AdminDashboard() {
     </View>
   );
 }
+
+
+
+

@@ -364,4 +364,29 @@ export class NotificationService {
       message
     });
   }
+
+  static async notifyAdminOfVisitorCheckOut(visit: any) {
+    return this.sendRoleNotification(Role.SUPER_ADMIN, {
+      type: 'VISITOR_CHECKED_OUT',
+      title: 'Visitor Checked Out',
+      message: `${visit.visitor?.name || 'Visitor'} has checked out at the Security Gate.`,
+      visitId: visit.id,
+      targetScreen: 'VisitDetails',
+      data: { visitId: visit.id }
+    });
+  }
+
+  static async notifyHostOfVisitorCheckOut(visit: any) {
+    return this.sendNotification({
+      type: 'VISITOR_CHECKED_OUT',
+      title: 'Visitor Checked Out',
+      message: `${visit.visitor?.name || 'Visitor'} has completed their visit and checked out at the Security Gate.`,
+      visitId: visit.id,
+      recipientId: visit.host?.id,
+      recipientRole: visit.host?.role,
+      targetScreen: 'VisitDetails',
+      data: { visitId: visit.id }
+    });
+  }
+
 }

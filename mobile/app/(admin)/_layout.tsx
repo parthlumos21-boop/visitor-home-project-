@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Bell, CheckSquare, Home, UserCircle, Users } from 'lucide-react-native';
+import { Bell, CheckSquare, Home, Shield, UserCircle, Users } from 'lucide-react-native';
 import { View, Text } from 'react-native';
 import type { ReactNode } from 'react';
 import { useNotifications } from '../../context/NotificationContext';
@@ -44,6 +44,13 @@ export default function AdminLayout() {
         options={{
           title: 'Approvals',
           tabBarIcon: ({ color }) => iconBox(<CheckSquare color={color} size={23} />),
+        }}
+      />
+      <Tabs.Screen
+        name="security/index"
+        options={{
+          title: 'Security',
+          tabBarIcon: ({ color }) => iconBox(<Shield color={color} size={23} />),
         }}
       />
       <Tabs.Screen
