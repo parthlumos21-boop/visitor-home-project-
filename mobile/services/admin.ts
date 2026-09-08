@@ -22,6 +22,7 @@ export const getAdminDashboard = async (): Promise<AdminDashboardStats> => {
 };
 
 export const getAdminEmployees = async (): Promise<AdminEmployee[]> => {
-  const response = await api.get('/admin/employees');
+  const response = await api.get('/employees');
   return response.data;
 };
+

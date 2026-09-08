@@ -24,12 +24,12 @@ export default function EmployeeDashboard() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
-  const [stats, setStats] = useState<EmployeeDashboardStats & { approvals?: number }>({
+    const [stats, setStats] = useState<EmployeeDashboardStats & { approvals?: number }>({
     myVisitors: 0,
     newVisitors: 0,
     upcoming: 0,
     inside: 0,
-    recent: 0,
+    sentInvitations: 0,
     approvals: 0,
   });
 
@@ -105,17 +105,17 @@ export default function EmployeeDashboard() {
       icon: <Clock color="#2563eb" size={22} />,
       onPress: () => router.push('/(employee)/visitors?filter=my'),
     },
-    {
+        {
       title: 'Upcoming Today',
       value: stats.upcoming,
       icon: <Users color="#2563eb" size={22} />,
       onPress: () => router.push('/(employee)/visitors?filter=upcoming'),
     },
     {
-      title: 'Recent Visits',
-      value: stats.recent,
-      icon: <History color="#2563eb" size={22} />,
-      onPress: () => router.push('/(employee)/visitors?filter=recent'),
+      title: 'Sent Invitations',
+      value: stats.sentInvitations || 0,
+      icon: <Users color="#2563eb" size={22} />,
+      onPress: () => router.push('/(employee)/sent-invitations'),
     }
   ];
 
@@ -256,3 +256,7 @@ export default function EmployeeDashboard() {
     </View>
   );
 }
+
+
+
+

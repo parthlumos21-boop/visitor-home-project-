@@ -29,3 +29,13 @@ export const checkOutVisit = async (visitId: string) => {
   const response = await api.post(`/visits/${visitId}/check-out`);
   return response.data;
 };
+
+export const getVisitorInvitations = async () => {
+  const response = await api.get('/visitors/my-invitations');
+  return response.data;
+};
+
+export const updateInvitationStatus = async (id: string, status: string, rejectionReason?: string) => {
+  const response = await api.patch(`/visitors/${id}/status`, { status, rejectionReason });
+  return response.data;
+};

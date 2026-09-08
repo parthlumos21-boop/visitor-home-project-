@@ -150,7 +150,7 @@ export const getEmployeeDashboard = async (req: AuthenticatedRequest, res: Respo
     const todayStart = startOfToday();
     const todayEnd = endOfToday();
 
-    const [myVisitors, newVisitors, upcoming, inside, recent] = await Promise.all([
+        const [myVisitors, newVisitors, upcoming, inside, recent, sentInvitations] = await Promise.all([
       prisma.visit.findMany({
         where: { hostId },
         distinct: ['visitorId'],
@@ -177,9 +177,12 @@ export const getEmployeeDashboard = async (req: AuthenticatedRequest, res: Respo
       prisma.visit.count({
         where: { hostId },
       }),
+      prisma.visit.count({
+        where: { createdBy: hostId },
+      }),
     ]);
 
-    res.json({ myVisitors: myVisitors.length, newVisitors, upcoming, inside, recent });
+    res.json({ myVisitors: myVisitors.length, newVisitors, upcoming, inside, recent, sentInvitations });
   } catch (error) {
     console.error('getEmployeeDashboard error:', error);
     res.status(500).json({ error: 'Failed to fetch employee dashboard' });
@@ -199,13 +202,16 @@ export const getEmployeeVisits = async (req: AuthenticatedRequest, res: Response
     const todayEnd = endOfToday();
     const where: any = { hostId };
 
-    if (filter === 'upcoming') {
+        if (filter === 'upcoming') {
       where.status = { in: [VisitStatus.PENDING, VisitStatus.APPROVED] };
       where.scheduledAt = { gte: todayStart, lte: todayEnd };
     } else if (filter === 'inside') {
       where.status = VisitStatus.CHECKED_IN;
       where.checkInAt = { not: null };
       where.checkOutAt = null;
+    } else if (filter === 'sent') {
+      delete where.hostId;
+      where.createdBy = hostId;
     }
 
     const visits = await prisma.visit.findMany({
@@ -319,7 +325,7 @@ export const createEmployeeInvitation = async (req: AuthenticatedRequest, res: R
       },
     });
 
-    await NotificationService.sendNotification({
+                await NotificationService.sendNotification({
       type: 'NEW_VISITOR_INVITATION',
       title: 'Visitor Invitation Created',
       message: `${visit.visitor.name} has been invited.\n${visit.displayId}`,
@@ -330,6 +336,21 @@ export const createEmployeeInvitation = async (req: AuthenticatedRequest, res: R
       targetScreen: 'Visitors',
       data: { visitId: visit.id },
     });
+
+    // Send notification to the visitor
+    if (visitor.id) {
+      await NotificationService.sendNotification({
+        type: 'NEW_VISITOR_INVITATION',
+        title: 'New Invitation Received',
+        message: `You have been invited by ${host?.name || 'Employee'}.`,
+        visitorId: visit.displayId || undefined,
+        visitId: visit.id,
+        recipientId: visitor.id,
+        recipientRole: Role.VISITOR,
+        targetScreen: 'Visitors',
+        data: { visitId: visit.id },
+      });
+    }
 
     res.status(201).json(visit);
   } catch (error: any) {
@@ -420,3 +441,9 @@ export const deactivateEmployee = async (req: AuthenticatedRequest, res: Respons
     res.status(500).json({ error: 'Failed to deactivate employee' });
   }
 };
+
+
+
+
+
+

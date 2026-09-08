@@ -28,6 +28,7 @@ export interface EmployeeDashboardStats {
   upcoming: number;
   inside: number;
   recent: number;
+  sentInvitations: number;
 }
 
 export interface EmployeeInvitationPayload {
@@ -83,3 +84,4 @@ export const getEmployeeVisits = async (filter?: string) => {
   const response = await api.get('/employees/visits', { params: filter ? { filter } : undefined });
   return response.data;
 };
+

@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from 'expo-router';
-import { Home, Calendar, Bell, User as UserIcon, LogOut } from 'lucide-react-native';
+import { Home, Calendar, Bell, User as UserIcon, LogOut, Mail } from 'lucide-react-native';
 import { TouchableOpacity, Text, View, Alert } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 
@@ -8,7 +8,7 @@ export default function VisitorLayout() {
   const clearAuth = useAuthStore(state => state.clearAuth);
   const user = useAuthStore(state => state.user);
 
-  console.log("✅ MOBILE APP CONNECTED AND RUNNING (LAYOUT MOUNTED)!");
+  console.log("?? MOBILE APP CONNECTED AND RUNNING (LAYOUT MOUNTED)!");
 
   const handleLogout = () => {
     try {
@@ -95,6 +95,13 @@ export default function VisitorLayout() {
         options={{
           href: null,
           title: 'Visit Details',
+        }}
+      />
+      <Tabs.Screen
+        name="invitations"
+        options={{
+          title: 'Invitations',
+          tabBarIcon: ({ color }) => <Mail color={color} size={24} />,
         }}
       />
       <Tabs.Screen
