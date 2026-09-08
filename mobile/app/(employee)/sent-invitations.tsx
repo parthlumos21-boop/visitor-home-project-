@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Clock, User, X, Mail } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Clock, User, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getEmployeeVisits } from '../../services/employee';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -84,10 +84,6 @@ export default function SentInvitations() {
                 </View>
 
                 <View className="mt-4 gap-3">
-                  <View className="flex-row items-center">
-                    <Mail color="#6b7280" size={18} />
-                    <Text className="ml-2 text-gray-700">{visit.visitor?.email || 'No email saved'}</Text>
-                  </View>
                   <View className="flex-row items-center">
                     <Calendar color="#6b7280" size={18} />
                     <Text className="ml-2 text-gray-700">{new Date(visit.scheduledAt).toLocaleDateString()}</Text>

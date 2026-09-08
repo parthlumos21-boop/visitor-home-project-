@@ -244,13 +244,12 @@ export default function ApprovalsScreen() {
                     <Text className="text-sm font-semibold text-gray-500 mb-4">Appointment ID: {appointment.appointmentId}</Text>
                     
                     <View className="mb-4">
-                      <Text className="text-base text-gray-800">📱 {appointment.mobile}</Text>
-                      {appointment.email && <Text className="text-base text-gray-800">✉️ {appointment.email}</Text>}
-                      {appointment.company && <Text className="text-base text-gray-800">🏢 {appointment.company}</Text>}
+                      <Text className="text-base text-gray-800">Mobile: {appointment.mobile}</Text>
+                      {appointment.company && <Text className="text-base text-gray-800">Company: {appointment.company}</Text>}
                     </View>
                     
                     <View className="mb-4">
-                      <Text className="text-base text-gray-800">📅 {appointment.visitDate}</Text>
+                      <Text className="text-base text-gray-800">Visit Date: {appointment.visitDate}</Text>
                     </View>
                     
                     <View className="flex-row justify-end">

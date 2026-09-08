@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Search, Calendar, Clock, Handshake, Building2, User as UserIcon } from 'lucide-react-native';
-import api from '../../services/api';
+import { ArrowLeft, Search, Calendar, Clock, Handshake, Building2, User as UserIcon, Check, ArrowRight } from 'lucide-react-native';
+import { getMyVisitorVisits } from '../../services/visits';
+import QRCode from 'react-native-qrcode-svg';
 
 export default function TotalVisits() {
   const router = useRouter();
@@ -15,8 +16,8 @@ export default function TotalVisits() {
 
   const fetchVisits = async () => {
     try {
-      const response = await api.get('/visitors');
-      setVisits(response.data);
+      const data = await getMyVisitorVisits('total');
+      setVisits(data || []);
     } catch (err) {
       console.error("Error fetching visits. Ensure backend is running:", err);
     } finally {
@@ -29,6 +30,8 @@ export default function TotalVisits() {
     // @ts-ignore
     router.push(`/(visitor)/visit-details/${visit.id}`);
   };
+
+  const getQrValue = (visit: any) => visit.qrCode?.token || visit.displayId || visit.id;
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -61,7 +64,7 @@ export default function TotalVisits() {
             <View key={visit.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-4 shadow-sm flex-1">
               {/* Top Bar */}
               <View className="flex-row items-center p-3 border-b border-gray-100 bg-gray-50">
-                <Text className="text-green-500 font-bold mr-2">✓</Text>
+                <Check color="#22c55e" size={18} style={{ marginRight: 8 }} />
                 <Text className="font-bold text-gray-900 text-sm">
                   {visit.status === 'COMPLETED' ? 'Visit Completed' : 'Appointment Confirmed'}
                 </Text>
@@ -69,35 +72,54 @@ export default function TotalVisits() {
               
               <View className="p-4">
                 <View className="flex-row justify-between items-center mb-4">
-                  <Text className="font-bold text-gray-900 text-lg">{visit.displayId || 'VIS-000000'}</Text>
+                  <Text className="font-bold text-gray-900 text-lg">{visit.displayId || 'Visit ID unavailable'}</Text>
                   <Text className="text-blue-700 font-bold text-sm tracking-wider">[ {visit.status} ]</Text>
                 </View>
 
-                <View className="flex-row items-center mb-2">
-                  <UserIcon color="#6b7280" size={18} className="mr-3" />
-                  <Text className="text-gray-700 font-medium">{visit.visitor?.name || 'Unknown Visitor'}</Text>
-                </View>
-                <View className="flex-row items-center mb-5">
-                  <Building2 color="#6b7280" size={18} className="mr-3" />
-                  <Text className="text-gray-700 font-medium">Host: {visit.host?.name || 'Unknown Host'}</Text>
+                <View className="flex-row items-start">
+                  <View className="min-w-0 flex-1 pr-3">
+                    <View className="flex-row items-center mb-2">
+                      <UserIcon color="#6b7280" size={18} className="mr-3" />
+                      <Text className="min-w-0 flex-1 text-gray-700 font-medium" numberOfLines={2}>{visit.visitor?.name || 'Unknown Visitor'}</Text>
+                    </View>
+                    <View className="flex-row items-center mb-3">
+                      <Building2 color="#6b7280" size={18} className="mr-3" />
+                      <Text className="min-w-0 flex-1 text-gray-700 font-medium" numberOfLines={2}>Host: {visit.host?.name || 'Unknown Host'}</Text>
+                    </View>
+                    {visit.createdByName ? (
+                      <View className="flex-row items-center mb-3">
+                        <UserIcon color="#6b7280" size={18} className="mr-3" />
+                        <Text className="min-w-0 flex-1 text-gray-700 font-medium" numberOfLines={2}>Created by: {visit.createdByName}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <TouchableOpacity className="w-[112px] items-center" activeOpacity={0.78} onPress={() => openDetails(visit)}>
+                    <View className="rounded-lg border border-gray-100 bg-white p-2 shadow-sm">
+                      <QRCode value={getQrValue(visit)} size={92} />
+                    </View>
+                    <Text className="mt-1 text-xs text-gray-500">Tap to view QR</Text>
+                  </TouchableOpacity>
                 </View>
 
-                <View className="flex-row items-center mb-2">
-                  <Calendar color="#6b7280" size={18} className="mr-3" />
-                  <Text className="text-gray-700">
-                    {new Date(visit.scheduledAt).toLocaleDateString()}
-                  </Text>
-                </View>
-                <View className="flex-row items-center mb-5">
-                  <Clock color="#6b7280" size={18} className="mr-3" />
-                  <Text className="text-gray-700">
-                    {new Date(visit.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
+                <View className="mt-2">
+                  <View className="flex-row items-center mb-2">
+                    <Calendar color="#6b7280" size={18} className="mr-3" />
+                    <Text className="text-gray-700">
+                      {new Date(visit.scheduledAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center mb-5">
+                    <Clock color="#6b7280" size={18} className="mr-3" />
+                    <Text className="text-gray-700">
+                      {new Date(visit.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
                 </View>
 
                 <View className="flex-row items-center mb-6">
                   <Handshake color="#6b7280" size={18} className="mr-3" />
-                  <Text className="text-gray-700">{visit.purpose}</Text>
+                  <Text className="min-w-0 flex-1 text-gray-700" numberOfLines={3}>{visit.purpose}</Text>
                 </View>
 
                 <TouchableOpacity 
@@ -105,7 +127,7 @@ export default function TotalVisits() {
                   className="flex-row justify-end items-center"
                 >
                   <Text className="font-bold text-blue-600 text-base mr-1">View Details</Text>
-                  <Text className="font-bold text-blue-600 text-lg">→</Text>
+                  <ArrowRight color="#2563eb" size={18} />
                 </TouchableOpacity>
               </View>
             </View>

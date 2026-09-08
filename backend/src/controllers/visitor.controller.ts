@@ -1,5 +1,6 @@
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import { prisma } from '../app';
 import { VisitStatus, Role } from '@prisma/client';
 import { NotificationService } from '../services/notification.service';
@@ -15,7 +16,23 @@ export const getVisitors = async (req: Request, res: Response): Promise<void> =>
       },
       orderBy: { scheduledAt: 'desc' }
     });
-    res.json(visits);
+    const creatorIds = visits
+      .map((visit) => visit.createdBy)
+      .filter((id): id is string => Boolean(id));
+    const creators = creatorIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: creatorIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const creatorNames = new Map(creators.map((creator) => [creator.id, creator.name]));
+
+    res.json(
+      visits.map((visit) => ({
+        ...visit,
+        createdByName: visit.createdBy ? creatorNames.get(visit.createdBy) || null : null,
+      }))
+    );
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch visitors' });
   }
@@ -98,6 +115,21 @@ export const checkVisitor = async (req: Request, res: Response): Promise<void> =
     res.json({ exists: visitors.length > 0, visitors });
   } catch (error) {
     res.status(500).json({ error: 'Failed to check visitor' });
+  }
+};
+
+export const getVisitorHosts = async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const hosts = await prisma.user.findMany({
+      where: { role: Role.EMPLOYEE, status: 'ACTIVE' },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, department: true },
+    });
+
+    res.json(hosts);
+  } catch (error) {
+    console.error('getVisitorHosts error:', error);
+    res.status(500).json({ error: 'Failed to fetch employee list' });
   }
 };
 
@@ -190,6 +222,49 @@ export const updateVisitStatus = async (req: Request, res: Response): Promise<vo
       await NotificationService.notifyAdminOfVisitorArrival(visit);
       await NotificationService.notifyHostOfVisitorArrival(visit);
     } else if (status === 'APPROVED' && visit.createdBy) {
+      const appointmentCount = await prisma.newAppointment.count();
+      const visitDate = `${String(visit.scheduledAt.getDate()).padStart(2, '0')}-${String(visit.scheduledAt.getMonth() + 1).padStart(2, '0')}-${visit.scheduledAt.getFullYear()}`;
+      const arrivalTime = visit.scheduledAt.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      const creator = await prisma.user.findUnique({
+        where: { id: visit.createdBy },
+        select: { id: true, name: true },
+      });
+
+      await prisma.newAppointment.create({
+        data: {
+          appointmentId: `APT-${String(appointmentCount + 1).padStart(6, '0')}`,
+          fullName: visit.visitor.name,
+          mobile: visit.visitor.phone,
+          email: visit.visitor.email || null,
+          purpose: visit.purpose,
+          personToMeet: visit.host.name,
+          department: visit.host.department || null,
+          visitDate,
+          arrivalTime,
+          status: 'APPROVED',
+          decidedAt: new Date(),
+          decidedBy: creator?.id || null,
+          decidedByName: creator?.name || 'Keval V Shah',
+        },
+      });
+      await prisma.qrCode.upsert({
+        where: { visitId: visit.id },
+        update: {},
+        create: {
+          visitId: visit.id,
+          token: randomUUID(),
+          expiresAt: (() => {
+            const expiresAt = new Date(visit.scheduledAt);
+            expiresAt.setHours(23, 59, 59, 999);
+            return expiresAt;
+          })(),
+        },
+      });
+
       await NotificationService.sendNotification({
         type: 'INVITATION_ACCEPTED',
         title: 'Invitation Accepted',
@@ -208,6 +283,29 @@ export const updateVisitStatus = async (req: Request, res: Response): Promise<vo
         targetScreen: 'Approvals',
         data: { visitId: visit.id }
       });
+      const visitorUser = await prisma.user.findFirst({
+        where: {
+          role: Role.VISITOR,
+          OR: [
+            { phone: visit.visitor.phone },
+            ...(visit.visitor.email ? [{ email: visit.visitor.email }] : []),
+          ],
+        },
+        select: { id: true, role: true },
+      });
+
+      if (visitorUser) {
+        await NotificationService.sendNotification({
+          type: 'INVITATION_ACCEPTED_VISITOR',
+          title: 'Invitation Accepted',
+          message: `Your visit with ${visit.host.name} is confirmed.`,
+          visitId: visit.id,
+          recipientId: visitorUser.id,
+          recipientRole: visitorUser.role,
+          targetScreen: 'TotalVisits',
+          data: { visitId: visit.id },
+        });
+      }
     } else if (status === 'REJECTED' && visit.createdBy) {
       await NotificationService.sendNotification({
         type: 'INVITATION_REJECTED',
@@ -230,9 +328,65 @@ export const updateVisitStatus = async (req: Request, res: Response): Promise<vo
     }
 
     res.json(visit);
-  } catch (error) {
+  } catch (error: any) {
     console.error('updateVisitStatus error:', error);
     res.status(500).json({ error: 'Failed to update status', details: error.message || String(error) });
+  }
+};
+
+export const getMyVisitorVisits = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user?.id },
+      select: { email: true, phone: true },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const visitorProfile = await prisma.visitorProfile.findFirst({
+      where: {
+        OR: [
+          ...(user.email ? [{ email: user.email }] : []),
+          ...(user.phone ? [{ phone: user.phone }] : []),
+        ],
+      },
+    });
+
+    if (!visitorProfile) {
+      res.json([]);
+      return;
+    }
+
+    const filter = String(req.query.filter || 'all');
+    const statuses =
+      filter === 'requests'
+        ? [VisitStatus.PENDING]
+        : filter === 'total'
+          ? [VisitStatus.APPROVED, VisitStatus.CHECKED_IN, VisitStatus.COMPLETED]
+          : filter === 'history'
+            ? [VisitStatus.COMPLETED]
+          : undefined;
+
+    const visits = await prisma.visit.findMany({
+      where: {
+        visitorId: visitorProfile.id,
+        ...(statuses ? { status: { in: statuses } } : {}),
+      },
+      include: {
+        visitor: { select: { name: true, phone: true } },
+        host: { select: { id: true, name: true, department: true } },
+        qrCode: { select: { token: true, expiresAt: true } },
+      },
+      orderBy: { scheduledAt: 'desc' },
+    });
+
+    res.json(visits);
+  } catch (error) {
+    console.error('getMyVisitorVisits error:', error);
+    res.status(500).json({ error: 'Failed to fetch visitor visits' });
   }
 };
 
@@ -266,7 +420,7 @@ export const getVisitorInvitations = async (req: AuthenticatedRequest, res: Resp
       where: {
         visitorId: visitorProfile.id,
         createdBy: { not: null },
-        status: { in: ['PENDING', 'APPROVED'] }
+        status: 'PENDING'
       },
       include: {
         host: {
@@ -279,7 +433,23 @@ export const getVisitorInvitations = async (req: AuthenticatedRequest, res: Resp
       orderBy: { scheduledAt: 'desc' }
     });
 
-    res.json(invitations);
+    const creatorIds = invitations
+      .map((invitation) => invitation.createdBy)
+      .filter((id): id is string => Boolean(id));
+    const creators = creatorIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: creatorIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const creatorNames = new Map(creators.map((creator) => [creator.id, creator.name]));
+
+    res.json(
+      invitations.map((invitation) => ({
+        ...invitation,
+        createdByName: invitation.createdBy ? creatorNames.get(invitation.createdBy) || null : null,
+      }))
+    );
   } catch (error) {
     console.error('getVisitorInvitations error:', error);
     res.status(500).json({ error: 'Failed to fetch invitations' });

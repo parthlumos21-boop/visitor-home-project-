@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, RefreshControl, ActivityIndicator, useWindowDimensions, Modal, Pressable } from 'react-native';
-import { Users, Clock, History, CalendarPlus, LogOut, Bell, X, Check } from 'lucide-react-native';
+import { Users, Clock, CalendarPlus, LogOut, Bell, X, Check, Send } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +29,7 @@ export default function EmployeeDashboard() {
     newVisitors: 0,
     upcoming: 0,
     inside: 0,
+    recent: 0,
     sentInvitations: 0,
     approvals: 0,
   });
@@ -114,7 +115,7 @@ export default function EmployeeDashboard() {
     {
       title: 'Sent Invitations',
       value: stats.sentInvitations || 0,
-      icon: <Users color="#2563eb" size={22} />,
+      icon: <Send color="#2563eb" size={22} />,
       onPress: () => router.push('/(employee)/sent-invitations'),
     }
   ];
@@ -168,7 +169,7 @@ export default function EmployeeDashboard() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View className="mt-6 flex-row flex-wrap justify-center" style={{ gap }}>
+          <View className="mt-6 flex-row flex-wrap justify-start" style={{ gap }}>
             {cards.map((card) => (
               <TouchableOpacity
                 key={card.title}

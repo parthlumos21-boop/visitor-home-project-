@@ -112,7 +112,11 @@ export default function VisitorInvitations() {
               <View className="gap-2 mb-4">
                 <View className="flex-row items-center">
                   <User color="#4b5563" size={16} />
-                  <Text className="ml-2 text-gray-700">Invited by: <Text className="font-bold">{invitation.host?.name}</Text></Text>
+                  <Text className="ml-2 text-gray-700">Invited by: <Text className="font-bold">{invitation.createdByName || invitation.host?.name || 'Admin'}</Text></Text>
+                </View>
+                <View className="flex-row items-center">
+                  <User color="#4b5563" size={16} />
+                  <Text className="ml-2 text-gray-700">Meeting: <Text className="font-bold">{invitation.host?.name}</Text></Text>
                 </View>
                 <View className="flex-row items-center">
                   <Calendar color="#4b5563" size={16} />

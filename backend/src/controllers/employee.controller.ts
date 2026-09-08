@@ -3,6 +3,7 @@ import { Role, VisitStatus } from '@prisma/client';
 import { prisma } from '../app';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import { NotificationService } from '../services/notification.service';
 
 const startOfToday = () => {
@@ -43,6 +44,12 @@ const parseVisitDateTime = (visitDate: string, arrivalTime?: string) => {
 const generateDisplayId = async () => {
   const count = await prisma.visit.count();
   return `VIS-${String(count + 1).padStart(6, '0')}`;
+};
+
+const endOfVisitDay = (date: Date) => {
+  const expiresAt = new Date(date);
+  expiresAt.setHours(23, 59, 59, 999);
+  return expiresAt;
 };
 
 const getUniqueConstraintMessage = (error: any): string | null => {
@@ -299,11 +306,18 @@ export const createEmployeeInvitation = async (req: AuthenticatedRequest, res: R
         createdBy: hostId,
         purpose: notes?.trim() ? `${purpose.trim()} - ${notes.trim()}` : purpose.trim(),
         scheduledAt,
-        status: VisitStatus.PENDING,
+        status: VisitStatus.APPROVED,
       },
       include: {
         visitor: true,
         host: true,
+      },
+    });
+    await prisma.qrCode.create({
+      data: {
+        visitId: visit.id,
+        token: randomUUID(),
+        expiresAt: endOfVisitDay(scheduledAt),
       },
     });
 
@@ -321,14 +335,17 @@ export const createEmployeeInvitation = async (req: AuthenticatedRequest, res: R
         visitDate: visitDate.trim(),
         arrivalTime: arrivalTime?.trim() || null,
         notes: detailNotes || null,
-        status: 'REGISTERED',
+        status: 'APPROVED',
+        decidedAt: new Date(),
+        decidedBy: hostId,
+        decidedByName: host?.name || 'Employee',
       },
     });
 
                 await NotificationService.sendNotification({
       type: 'NEW_VISITOR_INVITATION',
-      title: 'Visitor Invitation Created',
-      message: `${visit.visitor.name} has been invited.\n${visit.displayId}`,
+      title: 'Visitor Invitation Approved',
+      message: `${visit.visitor.name}'s visit is approved.\n${visit.displayId}`,
       visitorId: visit.displayId || undefined,
       visitId: visit.id,
       recipientId: hostId,
@@ -337,17 +354,28 @@ export const createEmployeeInvitation = async (req: AuthenticatedRequest, res: R
       data: { visitId: visit.id },
     });
 
+    const visitorUser = await prisma.user.findFirst({
+      where: {
+        role: Role.VISITOR,
+        OR: [
+          { phone: visitor.phone },
+          ...(visitor.email ? [{ email: visitor.email }] : []),
+        ],
+      },
+      select: { id: true, role: true },
+    });
+
     // Send notification to the visitor
-    if (visitor.id) {
+    if (visitorUser) {
       await NotificationService.sendNotification({
-        type: 'NEW_VISITOR_INVITATION',
-        title: 'New Invitation Received',
-        message: `You have been invited by ${host?.name || 'Employee'}.`,
+        type: 'APPOINTMENT_APPROVED',
+        title: 'Visit Approved',
+        message: `Your visit with ${host?.name || 'Employee'} is approved.`,
         visitorId: visit.displayId || undefined,
         visitId: visit.id,
-        recipientId: visitor.id,
-        recipientRole: Role.VISITOR,
-        targetScreen: 'Visitors',
+        recipientId: visitorUser.id,
+        recipientRole: visitorUser.role,
+        targetScreen: 'TotalVisits',
         data: { visitId: visit.id },
       });
     }

@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import type { ReactNode } from 'react';
-import { LayoutDashboard, Users, CalendarPlus, Bell, User, CheckCircle } from 'lucide-react-native';
+import { LayoutDashboard, Users, Bell, User, CheckCircle } from 'lucide-react-native';
 import { View, Text } from 'react-native';
 import { useNotifications } from '../../context/NotificationContext';
 
@@ -55,8 +55,7 @@ export default function EmployeeLayout() {
       <Tabs.Screen
         name="invitations"
         options={{
-          title: 'New Visitor',
-          tabBarIcon: ({ color }) => iconBox(<CalendarPlus color={color} size={23} />),
+          href: null,
         }}
       />
       <Tabs.Screen
@@ -71,6 +70,12 @@ export default function EmployeeLayout() {
         options={{
           title: 'Approvals',
           tabBarIcon: ({ color }) => iconBox(<CheckCircle color={color} size={23} />),
+        }}
+      />
+      <Tabs.Screen
+        name="sent-invitations"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen

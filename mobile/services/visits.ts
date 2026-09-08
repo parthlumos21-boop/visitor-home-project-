@@ -6,7 +6,12 @@ export const createVisit = async (data: { purpose: string; scheduledAt: string; 
 };
 
 export const getMyVisits = async () => {
-  const response = await api.get('/visits/me');
+  const response = await api.get('/visitors/my-visits');
+  return response.data;
+};
+
+export const getMyVisitorVisits = async (filter?: 'requests' | 'total' | 'history') => {
+  const response = await api.get('/visitors/my-visits', { params: filter ? { filter } : undefined });
   return response.data;
 };
 

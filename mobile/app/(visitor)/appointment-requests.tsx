@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Clock, Handshake, User as UserIcon } from 'lucide-react-native';
-import api from '../../services/api';
+import { ArrowLeft, Calendar, Clock, Handshake, User as UserIcon, Hourglass, Check } from 'lucide-react-native';
+import { getMyVisitorVisits } from '../../services/visits';
 
 export default function AppointmentRequests() {
   const router = useRouter();
@@ -15,9 +15,8 @@ export default function AppointmentRequests() {
 
   const fetchVisits = async () => {
     try {
-      const response = await api.get('/visitors');
-      // Filter for requests (e.g. pending/confirmed) if needed, currently showing all
-      setVisits(response.data);
+      const data = await getMyVisitorVisits('requests');
+      setVisits(data || []);
     } catch (err) {
       console.error("Error fetching visits:", err);
     } finally {
@@ -68,7 +67,7 @@ export default function AppointmentRequests() {
           visits.map((visit) => (
             <View key={visit.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-4 shadow-sm flex-1">
               <View className="p-4 border-b border-gray-100">
-                <Text className="font-bold text-gray-900 text-base mb-2">REQUEST #{visit.displayId || 'VIS-000000'}</Text>
+                <Text className="font-bold text-gray-900 text-base mb-2">REQUEST #{visit.displayId || 'Visit ID unavailable'}</Text>
                 
                 <View className="flex-row items-center mb-3">
                   <Calendar color="#6b7280" size={18} className="mr-3" />
@@ -88,16 +87,22 @@ export default function AppointmentRequests() {
                   <UserIcon color="#6b7280" size={18} className="mr-3" />
                   <Text className="text-gray-700">Meeting with {visit.host?.name || 'Unknown'}</Text>
                 </View>
+                {visit.createdByName ? (
+                  <View className="flex-row items-center mb-4">
+                    <UserIcon color="#6b7280" size={18} className="mr-3" />
+                    <Text className="text-gray-700">Created by {visit.createdByName}</Text>
+                  </View>
+                ) : null}
                 
                 <View className="flex-row items-center mb-4">
                   {visit.status === 'PENDING' ? (
                     <>
-                      <Text className="text-amber-500 font-bold mr-2">⏳</Text>
+                      <Hourglass color="#f59e0b" size={18} style={{ marginRight: 8 }} />
                       <Text className="text-amber-600 font-bold uppercase tracking-wider">[ PENDING ]</Text>
                     </>
                   ) : (
                     <>
-                      <Text className="text-green-500 font-bold mr-2">✓</Text>
+                      <Check color="#22c55e" size={18} style={{ marginRight: 8 }} />
                       <Text className="text-green-600 font-bold uppercase tracking-wider">[ {visit.status} ]</Text>
                     </>
                   )}

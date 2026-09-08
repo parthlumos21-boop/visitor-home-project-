@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Modal, FlatList, Alert, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
-import { ChevronDown, X, ArrowLeft, Calendar, User, Clock, FileText } from 'lucide-react-native';
+import { ChevronDown, X, ArrowLeft, Calendar, Clock } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CustomButton } from '../../components/CustomButton';
 import { createEmployeeInvitation } from '../../services/employee';
@@ -114,7 +114,7 @@ export default function EmployeeInvitations() {
         validFor,
         notes: notes.trim() || undefined,
       });
-      Alert.alert('Success', 'New visitor saved successfully.', [
+      Alert.alert('Success', 'Visit approved and added to the visitor total visits.', [
         {
           text: 'Add Another',
           onPress: resetForm,
@@ -342,19 +342,20 @@ export default function EmployeeInvitations() {
         </View>
 
         {/* Actions */}
-        <View className="mb-8">
-          <CustomButton 
-            title="Send Invitation" 
-            onPress={handleSendInvitation} 
-            isLoading={isLoading} 
-          />
+        <View className="mb-8 flex-row items-center justify-end gap-3">
           <TouchableOpacity 
-            className="mt-4 py-3 items-center justify-center rounded-lg border border-gray-300 bg-white"
+            className="h-12 min-w-[104px] items-center justify-center rounded-lg border border-gray-300 bg-white px-4"
             onPress={() => router.push('/(employee)/dashboard')}
             disabled={isLoading}
           >
             <Text className="text-gray-700 font-bold">Cancel</Text>
           </TouchableOpacity>
+          <CustomButton
+            title="Send Invitation"
+            onPress={handleSendInvitation}
+            isLoading={isLoading}
+            className="h-12 min-w-[168px] px-5"
+          />
         </View>
       </ScrollView>
     </View>

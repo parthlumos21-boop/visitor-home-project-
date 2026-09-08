@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Clock, Handshake, Building2, User as UserIcon } from 'lucide-react-native';
-import api from '../../services/api';
+import { ArrowLeft, Calendar, Clock, Handshake, User as UserIcon, Check } from 'lucide-react-native';
+import { getMyVisitorVisits } from '../../services/visits';
 
 export default function VisitHistory() {
   const router = useRouter();
@@ -15,9 +15,8 @@ export default function VisitHistory() {
 
   const fetchVisits = async () => {
     try {
-      const response = await api.get('/visitors');
-      // Filter for completed/past visits if needed, currently showing all
-      setVisits(response.data);
+      const data = await getMyVisitorVisits('history');
+      setVisits(data || []);
     } catch (err) {
       console.error("Error fetching visits:", err);
     } finally {
@@ -52,11 +51,11 @@ export default function VisitHistory() {
           visits.map((visit) => (
             <View key={visit.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-4 shadow-sm">
               <View className="flex-row items-center p-4 border-b border-gray-100">
-                <Text className="text-green-500 font-bold mr-2">✓</Text>
+                <Check color="#22c55e" size={18} style={{ marginRight: 8 }} />
                 <Text className="font-bold text-gray-900 text-base">VISIT {visit.status}</Text>
               </View>
               <View className="p-4">
-                <Text className="font-bold text-gray-800 text-lg mb-4">{visit.displayId || 'VIS-000000'}</Text>
+                <Text className="font-bold text-gray-800 text-lg mb-4">{visit.displayId || 'Visit ID unavailable'}</Text>
                 <View className="flex-row items-center mb-3">
                   <Calendar color="#6b7280" size={18} className="mr-3" />
                   <Text className="text-gray-700">{new Date(visit.scheduledAt).toLocaleDateString()}</Text>

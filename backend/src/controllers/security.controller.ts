@@ -16,7 +16,7 @@ export const scanQrCode = async (req: Request, res: Response): Promise<void> => 
         visit: {
           include: {
             visitor: true,
-            host: { select: { name: true, email: true } }
+            host: { select: { name: true, department: true } }
           }
         }
       }
@@ -43,7 +43,17 @@ export const scanQrCode = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    res.json({ message: 'ALLOW ENTRY', visit });
+    res.json({
+      message: 'ALLOW ENTRY',
+      visit,
+      details: {
+        visitorId: visit.displayId || visit.id,
+        hostName: visit.host.name,
+        date: visit.scheduledAt.toLocaleDateString('en-IN'),
+        time: visit.scheduledAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+        purpose: visit.purpose,
+      },
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to process QR scan' });
   }

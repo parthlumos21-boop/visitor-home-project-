@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Modal, FlatList, Platform, Alert, ActivityIndicator } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { ChevronDown, X, Calendar } from 'lucide-react-native';
 import { createNewAppointment } from '../../services/appointments';
+import api from '../../services/api';
 
 const SelectField = ({ label, value, options, onSelect }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -75,6 +76,7 @@ export default function NewRegistrationScreen() {
   const router = useRouter();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hosts, setHosts] = useState<any[]>([]);
 
   const [form, setForm] = useState({
     fullName: '', mobile: '', email: '', company: '',
@@ -85,6 +87,20 @@ export default function NewRegistrationScreen() {
     })(),
     arrivalTime: '', vehicleNumber: '', notes: ''
   });
+  const hostNames = useMemo(() => hosts.map((host) => host.name), [hosts]);
+
+  useEffect(() => {
+    const loadHosts = async () => {
+      try {
+        const response = await api.get('/visitors/hosts');
+        setHosts(response.data || []);
+      } catch (error) {
+        Alert.alert('Server Error', 'Unable to load employee list.');
+      }
+    };
+
+    loadHosts();
+  }, []);
 
   const handleRegister = async () => {
     if (!form.fullName.trim() || !form.mobile.trim() || !form.purpose.trim() || !form.personToMeet.trim() || !form.visitDate.trim()) {
@@ -95,7 +111,16 @@ export default function NewRegistrationScreen() {
     setIsSubmitting(true);
     try {
       const appointment = await createNewAppointment(form);
-      router.push({
+      setForm({
+        fullName: '', mobile: '', email: '', company: '',
+        visitorType: '', purpose: '', personToMeet: '', department: '',
+        visitDate: (() => {
+          const d = new Date();
+          return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+        })(),
+        arrivalTime: '', vehicleNumber: '', notes: ''
+      });
+      router.replace({
         pathname: '/(visitor)/appointment',
         params: {
           ...form,
@@ -125,8 +150,11 @@ export default function NewRegistrationScreen() {
       <Text className="text-sm font-bold text-gray-500 tracking-widest mb-4">VISIT DETAILS</Text>
       <SelectField label="Visitor Type" value={form.visitorType} options={['Contractor', 'Client', 'Interviewee', 'Vendor', 'Personal']} onSelect={(v: string) => setForm({...form, visitorType: v})} />
       <SelectField label="Purpose of Visit *" value={form.purpose} options={['Meeting', 'Delivery', 'Interview', 'Maintenance', 'Other']} onSelect={(v: string) => setForm({...form, purpose: v})} />
-      <SelectField label="Person to Meet *" value={form.personToMeet} options={['John Doe', 'Jane Smith', 'HR Department']} onSelect={(v: string) => setForm({...form, personToMeet: v})} />
-      <SelectField label="Department" value={form.department} options={['IT', 'HR', 'Operations', 'Sales']} onSelect={(v: string) => setForm({...form, department: v})} />
+      <SelectField label="Person to Meet *" value={form.personToMeet} options={hostNames} onSelect={(v: string) => {
+        const host = hosts.find((item) => item.name === v);
+        setForm({...form, personToMeet: v, department: host?.department || ''});
+      }} />
+      <SelectField label="Department" value={form.department} options={[...new Set(hosts.map((host) => host.department).filter(Boolean))]} onSelect={(v: string) => setForm({...form, department: v})} />
       <InputField 
         label="Visit Date" 
         placeholder="DD-MM-YYYY" 

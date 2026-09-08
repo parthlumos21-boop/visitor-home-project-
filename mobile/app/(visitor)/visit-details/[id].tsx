@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, MapPin, Calendar as CalendarIcon, Clock, Handshake, Building2, User as UserIcon, Phone } from 'lucide-react-native';
-import api from '../../../services/api';
+import { ArrowLeft, Calendar as CalendarIcon, Clock, Handshake, Building2, User as UserIcon, Phone, Download, Share2 } from 'lucide-react-native';
+import { getMyVisitorVisits } from '../../../services/visits';
+import QRCode from 'react-native-qrcode-svg';
 
 export default function VisitDetails() {
   const { id } = useLocalSearchParams();
@@ -18,10 +19,8 @@ export default function VisitDetails() {
 
   const fetchVisitDetails = async () => {
     try {
-      // Fetch all and filter for simplicity, or ideally have a GET /visitors/:id endpoint
-      // We will fetch all and find the matching one since we know /visitors returns all.
-      const response = await api.get('/visitors');
-      const found = response.data.find((v: any) => v.id === id);
+      const data = await getMyVisitorVisits();
+      const found = data.find((v: any) => v.id === id);
       setVisit(found);
     } catch (err) {
       console.error("Error fetching visit details:", err);
@@ -54,6 +53,8 @@ export default function VisitDetails() {
     );
   }
 
+  const qrValue = visit.qrCode?.token || visit.displayId || visit.id;
+
   return (
     <View className="flex-1 bg-gray-50">
       {/* Header */}
@@ -65,10 +66,28 @@ export default function VisitDetails() {
       </View>
 
       <ScrollView className="flex-1 p-4">
-        {/* Status Card */}
-        <View className="bg-blue-50 rounded-2xl p-6 border border-blue-100 mb-6 items-center">
-          <Text className="text-blue-800 font-bold mb-2 uppercase tracking-widest text-xs">CURRENT STATUS</Text>
-          <Text className="text-blue-900 font-black text-2xl tracking-wide">{visit.status}</Text>
+        <View className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 mb-4 flex-row items-center justify-between">
+          <Text className="text-gray-900 font-bold">Appointment Confirmed</Text>
+          <Text className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 font-bold uppercase">{visit.status}</Text>
+        </View>
+
+        <View className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm mb-4 items-center">
+          <View className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+            <QRCode value={qrValue} size={148} />
+          </View>
+          <Text className="mt-3 text-2xl font-black text-gray-950">{visit.displayId || 'Visit ID unavailable'}</Text>
+          <Text className="mt-1 text-sm text-gray-600">Show this QR code at the gate</Text>
+
+          <View className="mt-4 flex-row gap-3">
+            <TouchableOpacity className="h-11 flex-1 flex-row items-center justify-center rounded-lg border border-blue-600 bg-white px-3">
+              <Download color="#2563eb" size={18} />
+              <Text className="ml-2 font-bold text-blue-700">Download QR</Text>
+            </TouchableOpacity>
+            <TouchableOpacity className="h-11 flex-1 flex-row items-center justify-center rounded-lg border border-blue-600 bg-white px-3">
+              <Share2 color="#2563eb" size={18} />
+              <Text className="ml-2 font-bold text-blue-700">Share QR</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Details Section */}
@@ -77,7 +96,7 @@ export default function VisitDetails() {
           {/* Formatted ID */}
           <View className="mb-6 border-b border-gray-100 pb-4">
             <Text className="text-gray-400 text-xs font-bold mb-1 uppercase tracking-wider">Visitor ID</Text>
-            <Text className="text-gray-900 text-lg font-bold">{visit.displayId || 'VIS-000000'}</Text>
+            <Text className="text-gray-900 text-lg font-bold">{visit.displayId || 'Visit ID unavailable'}</Text>
           </View>
 
           {/* Visitor Info */}
@@ -85,7 +104,7 @@ export default function VisitDetails() {
             <Text className="text-gray-400 text-xs font-bold mb-3 uppercase tracking-wider">Visitor Information</Text>
             <View className="flex-row items-center mb-3">
               <UserIcon color="#9ca3af" size={20} className="mr-3" />
-              <Text className="text-gray-800 font-medium text-base">{visit.visitor?.name || 'N/A'}</Text>
+              <Text className="min-w-0 flex-1 text-gray-800 font-medium text-base" numberOfLines={3}>{visit.visitor?.name || 'N/A'}</Text>
             </View>
             <View className="flex-row items-center">
               <Phone color="#9ca3af" size={20} className="mr-3" />
@@ -98,11 +117,11 @@ export default function VisitDetails() {
             <Text className="text-gray-400 text-xs font-bold mb-3 uppercase tracking-wider">Host Employee</Text>
             <View className="flex-row items-center mb-3">
               <Building2 color="#9ca3af" size={20} className="mr-3" />
-              <Text className="text-gray-800 font-medium text-base">{visit.host?.name || 'N/A'}</Text>
+              <Text className="min-w-0 flex-1 text-gray-800 font-medium text-base" numberOfLines={3}>{visit.host?.name || 'N/A'}</Text>
             </View>
             <View className="flex-row items-center">
               <Handshake color="#9ca3af" size={20} className="mr-3" />
-              <Text className="text-gray-800 font-medium text-base">{visit.purpose || 'N/A'}</Text>
+              <Text className="min-w-0 flex-1 text-gray-800 font-medium text-base" numberOfLines={4}>{visit.purpose || 'N/A'}</Text>
             </View>
           </View>
 
