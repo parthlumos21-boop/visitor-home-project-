@@ -56,25 +56,32 @@ export default function VisitorDashboard() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
       }
     >
-      <View className="flex-row justify-between items-center mt-16 mb-5">
+      <View className="flex-row justify-between items-center mt-16 mb-6 px-1">
+        <Text className="text-2xl font-black text-gray-950 tracking-tight">Visitor</Text>
+
+        <TouchableOpacity onPress={handleLogout} className="p-3 bg-white rounded-full shadow-sm border border-gray-200">
+          <LogOut color="#dc2626" size={20} />
+        </TouchableOpacity>
+      </View>
+
+      <View className="items-end mb-2">
         <TouchableOpacity 
           onPress={() => router.push('/(visitor)/new-registration')}
-          className="bg-blue-600 px-5 py-3 rounded-xl shadow-sm flex-row items-center"
+          className="bg-blue-600 px-4 py-2 rounded-lg shadow-sm flex-row items-center"
+          activeOpacity={0.8}
         >
-          <Plus color="#ffffff" size={18} className="mr-2" />
-          <Text className="text-white font-bold text-sm">New Appointment</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleLogout} className="p-3 bg-white rounded-full shadow-sm border border-gray-100">
-          <LogOut color="#ef4444" size={20} />
+          <Plus color="#ffffff" size={16} className="mr-1" />
+          <Text className="text-white font-bold text-sm">New</Text>
         </TouchableOpacity>
       </View>
 
-      <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
-        <Text className="text-xl font-bold text-gray-900 mb-2">Welcome, {user?.name || 'Visitor'}</Text>
-        <Text className="text-sm font-semibold text-gray-800 mb-1">Your Visitor Dashboard</Text>
-        <Text className="text-xs text-gray-500">Manage your appointments.</Text>
+      <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+        <Text className="text-xl font-bold text-gray-900 mb-1">Welcome, {user?.name || 'Visitor'}</Text>
+        <Text className="text-xs text-gray-500 mb-3">Your Visitor Dashboard</Text>
+        <Text className="text-sm text-gray-600 font-medium">Manage your appointments.</Text>
       </View>
+
+      
 
       <Text className="text-gray-500 font-bold mb-4 ml-1 mt-2">YOUR VISIT OVERVIEW</Text>
 

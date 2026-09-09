@@ -9,8 +9,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { CalendarDays, Clock, Plus, User, X } from 'lucide-react-native';
+import { CalendarDays, ChevronRight, Clock, Plus, User, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import QRCode from 'react-native-qrcode-svg';
 import { getNewAppointments } from '../../services/appointments';
 import { getApiErrorMessage } from '../../services/errorMessage';
 
@@ -38,7 +39,7 @@ export default function VisitorsScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <View className="bg-white px-4 pt-12 pb-4 border-b border-gray-200">
+      <View className="bg-white px-4 pt-14 pb-4 border-b border-gray-200">
         <Text className="text-xl font-bold text-gray-950">Visitors</Text>
         <TouchableOpacity
           onPress={() => router.push('/(admin)/add-visitor')}
@@ -61,34 +62,56 @@ export default function VisitorsScreen() {
             <Text className="mt-12 text-center text-gray-500">No visitors found.</Text>
           ) : (
             visitors.map((visitor) => (
-              <View key={visitor.id} className="mb-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                <View className="flex-row">
-                  <View className="mr-3 h-11 w-11 items-center justify-center rounded-lg bg-blue-50">
-                    <User color="#2563eb" size={22} />
+              <View key={visitor.id} className="mb-4 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <View className="flex-row items-center p-3 border-b border-gray-100 bg-gray-50">
+                  <View className="mr-2 h-7 w-7 items-center justify-center rounded bg-blue-100">
+                    <User color="#2563eb" size={16} />
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-bold text-gray-950">{visitor.fullName}</Text>
-                    <Text className="mt-1 text-sm text-gray-500">{visitor.company || 'No company provided'}</Text>
-                    <Text className="mt-2 text-sm text-gray-700">{visitor.mobile}</Text>
-                    <Text className="mt-1 text-sm text-gray-700">Meeting: {visitor.personToMeet}</Text>
-                    <Text
-                      className={`mt-1 text-xs font-semibold ${
-                        visitor.status === 'REJECTED'
-                          ? 'text-red-700'
-                          : visitor.status === 'APPROVED'
-                            ? 'text-emerald-700'
-                            : 'text-blue-700'
-                      }`}
-                    >
-                      {visitor.status}
+                  <Text className="font-bold text-gray-900 text-sm">
+                    Visitor details
+                  </Text>
+                </View>
+                
+                <View className="p-4">
+                  <View className="flex-row justify-between items-center mb-4">
+                    <Text className="font-bold text-gray-900 text-lg">{visitor.fullName}</Text>
+                    <Text className={`font-bold text-sm tracking-wider ${
+                      visitor.status === 'REJECTED' ? 'text-red-700' : visitor.status === 'APPROVED' ? 'text-emerald-700' : 'text-blue-700'
+                    }`}>
+                      [ {visitor.status} ]
                     </Text>
+                  </View>
+
+                  <View className="flex-row items-start">
+                    <View className="min-w-0 flex-1 pr-3">
+                      <Text className="text-sm text-gray-500 mb-1">{visitor.company || 'No company provided'}</Text>
+                      <Text className="text-sm text-gray-700 mb-1">{visitor.mobile}</Text>
+                      <Text className="text-sm text-gray-700">Meeting: {visitor.personToMeet}</Text>
+                    </View>
+
                     <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel={`View details for ${visitor.fullName}`}
+                      className="w-[112px] items-center"
+                      activeOpacity={0.78}
                       onPress={() => setDetailsVisitor(visitor)}
-                      className="mt-3 h-10 items-center justify-center rounded-md border border-gray-200 bg-gray-50"
                     >
-                      <Text className="font-bold text-gray-800">View Details</Text>
+                      <View className="rounded-lg border border-gray-100 bg-white p-2 shadow-sm">
+                        <QRCode value={visitor.id || 'N/A'} size={92} />
+                      </View>
                     </TouchableOpacity>
                   </View>
+
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={`View details for ${visitor.fullName}`}
+                    onPress={() => setDetailsVisitor(visitor)}
+                    className="mt-4 h-11 flex-row items-center justify-center rounded-md border border-blue-100 bg-blue-50"
+                    activeOpacity={0.78}
+                  >
+                    <Text className="font-bold text-blue-700">View Details</Text>
+                    <ChevronRight color="#2563eb" size={17} />
+                  </TouchableOpacity>
                 </View>
               </View>
             ))
@@ -112,6 +135,10 @@ export default function VisitorsScreen() {
                 </View>
                 <Text className="mt-3 text-xl font-bold text-gray-950">{detailsVisitor?.fullName}</Text>
                 <Text className="mt-1 text-sm text-gray-500">{detailsVisitor?.company || 'No company provided'}</Text>
+                <View className="mt-4 rounded-lg border border-gray-100 bg-white p-3 shadow-sm">
+                  <QRCode value={detailsVisitor?.id || 'N/A'} size={148} />
+                </View>
+                <Text className="mt-2 text-xs font-semibold text-gray-500">Visitor QR Code</Text>
                 <Text
                   className={`mt-3 rounded-full px-3 py-1 text-xs font-bold ${
                     detailsVisitor?.status === 'REJECTED'

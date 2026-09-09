@@ -52,6 +52,7 @@ model Visit {
   status      VisitStatus 
   checkInAt   DateTime?
   checkOutAt  DateTime?
+  durationMinutes Int?
   createdAt   DateTime  @default(now())
 
   // Relations

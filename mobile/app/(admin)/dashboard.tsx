@@ -1,6 +1,6 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable, useWindowDimensions, RefreshControl } from 'react-native';
-import { Bell, CalendarDays, Clock, LogOut, UserCheck, Users, X, Shield } from 'lucide-react-native';
+import { Bell, CalendarDays, Clock, LogOut, UserCheck, Users, X, Shield, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAdminDashboard, AdminDashboardStats } from '../../services/admin';
@@ -56,6 +56,12 @@ export default function AdminDashboard() {
       setError('');
       const dashboardStats = await getAdminDashboard();
       setStats(dashboardStats);
+      console.log('[Admin Dashboard]', {
+        totalVisits: dashboardStats.totalVisits,
+        pendingApprovals: dashboardStats.pendingApprovals,
+        currentlyInside: dashboardStats.currentlyInside,
+        source: 'postgres',
+      });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to load dashboard data.'));
     } finally {
@@ -84,7 +90,7 @@ export default function AdminDashboard() {
       title: 'Total Visits',
       value: stats.totalVisits,
       icon: <Users color="#2563eb" size={22} />,
-      onPress: () => router.push('/(admin)/visitors'),
+      onPress: () => router.push('/(admin)/total-visits'),
       accent: 'bg-blue-50',
     },
     {
@@ -98,14 +104,14 @@ export default function AdminDashboard() {
       title: 'Currently Inside',
       value: stats.currentlyInside,
       icon: <UserCheck color="#059669" size={22} />,
-      onPress: () => router.push('/(admin)/visitors?filter=inside'),
+      onPress: () => router.push('/(admin)/total-visits?filter=inside'),
       accent: 'bg-emerald-50',
     },
     {
       title: 'Appointments Today',
       value: stats.appointmentsToday,
       icon: <CalendarDays color="#7c3aed" size={22} />,
-      onPress: () => router.push('/(admin)/approvals'),
+      onPress: () => router.push('/(admin)/visitors'),
       accent: 'bg-violet-50',
     },
     {
@@ -132,7 +138,7 @@ export default function AdminDashboard() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <View className="bg-white border-b border-gray-200 px-4 pb-3" style={{ paddingTop: insets.top + 8 }}>
+      <View className="bg-white border-b border-gray-200 px-4 pb-3" style={{ paddingTop: insets.top + 16 }}>
         <View className="flex-row items-center justify-between">
           <Text className="flex-1 text-lg font-bold text-gray-950">Admin</Text>
           <TouchableOpacity
@@ -162,8 +168,20 @@ export default function AdminDashboard() {
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />}
       >
-        <Text className="text-xl font-bold text-gray-950">Welcome, {adminName || 'Admin'}</Text>
-        <Text className="mt-1 text-base text-gray-600">Manage visitors and appointments</Text>
+        <View className="flex-row justify-between items-start">
+          <View>
+            <Text className="text-xl font-bold text-gray-950">Welcome, {adminName || 'Admin'}</Text>
+            <Text className="mt-1 text-base text-gray-600">Manage visitors and appointments</Text>
+          </View>
+          <TouchableOpacity 
+            onPress={() => router.push('/(visitor)/new-registration')} 
+            className="flex-row items-center bg-blue-600 px-3 py-2 rounded-lg shadow-sm"
+            activeOpacity={0.78}
+          >
+             <Plus color="#ffffff" size={18} />
+             <Text className="text-white font-bold ml-1 text-sm">Add New</Text>
+          </TouchableOpacity>
+        </View>
 
         {isLoading ? (
           <View className="mt-12 items-center justify-center">

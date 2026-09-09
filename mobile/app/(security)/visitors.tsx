@@ -1,9 +1,22 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, TextInput, Alert } from 'react-native';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Search, User, Phone, Calendar, Clock, LogIn, LogOut, CheckCircle } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Search, User, Phone, Calendar, Clock, LogIn, LogOut, CheckCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSecurityVisits, checkInVisitorApi, checkOutVisitorApi } from '../../services/security';
+
+const formatStoredTime = (dateStr?: string | null) => {
+  if (!dateStr) return null;
+  return new Date(dateStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+};
+
+const formatDuration = (minutes?: number | null) => {
+  if (typeof minutes !== 'number') return null;
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes ? `${hours} hr ${remainingMinutes} min` : `${hours} hr`;
+};
 
 export default function SecurityVisitors() {
   const router = useRouter();
@@ -15,6 +28,7 @@ export default function SecurityVisitors() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const getTitle = () => {
     switch (filter) {
@@ -26,22 +40,38 @@ export default function SecurityVisitors() {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchVisits();
-    }, [filter])
-  );
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchVisits();
+  }, [filter]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchVisits = async () => {
     setLoading(true);
     try {
       const data = await getSecurityVisits(filter);
-      setVisits(data || []);
-      setFilteredVisits(data || []);
+      if (mounted.current) {
+        setVisits(data || []);
+        setFilteredVisits(data || []);
+      }
     } catch (error) {
       console.error('Failed to fetch security visits:', error);
     } finally {
-      setLoading(false);
+      if (mounted.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -92,14 +122,9 @@ export default function SecurityVisitors() {
       {/* Header */}
       <View 
         className="bg-white px-4 pb-3 border-b border-gray-200 flex-row items-center justify-between"
-        style={{ paddingTop: Math.max(insets.top, 16) }}
+        style={{ paddingTop: Math.max(insets.top, 16) + 8 }}
       >
-        <View className="flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <ArrowLeft color="#1f2937" size={24} />
-          </TouchableOpacity>
-          <Text className="text-xl font-bold text-gray-900">{getTitle()}</Text>
-        </View>
+        <Text className="text-xl font-bold text-gray-900">{getTitle()}</Text>
       </View>
 
       <View className="p-4 bg-white border-b border-gray-200">
@@ -128,6 +153,14 @@ export default function SecurityVisitors() {
             const scheduled = visit.scheduledAt ? new Date(visit.scheduledAt) : new Date();
             const dateStr = scheduled.toLocaleDateString('en-IN');
             const timeStr = scheduled.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const checkInTime = formatStoredTime(visit.checkInAt);
+            const checkOutTime = formatStoredTime(visit.checkOutAt);
+            const runningDurationMinutes = visit.checkInAt
+              ? Math.max(0, Math.floor((now - new Date(visit.checkInAt).getTime()) / 60000))
+              : null;
+            const duration = visit.status === 'CHECKED_IN'
+              ? formatDuration(runningDurationMinutes)
+              : formatDuration(visit.durationMinutes);
 
             return (
               <View key={visit.id} className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
@@ -156,6 +189,20 @@ export default function SecurityVisitors() {
                   <Text className="text-gray-600 text-sm"><Text className="font-semibold text-gray-800">Host:</Text> {visit.host?.name || 'N/A'} ({visit.host?.department || 'General'})</Text>
                   <Text className="text-gray-600 text-sm"><Text className="font-semibold text-gray-800">Time:</Text> {dateStr} at {timeStr}</Text>
                   <Text className="text-gray-600 text-sm"><Text className="font-semibold text-gray-800">Purpose:</Text> {visit.purpose}</Text>
+                  {checkInTime ? (
+                    <Text className="text-gray-600 text-sm"><Text className="font-semibold text-gray-800">Inside:</Text> {checkInTime}</Text>
+                  ) : null}
+                  {visit.status === 'CHECKED_IN' ? (
+                    <Text className="text-gray-600 text-sm"><Text className="font-semibold text-gray-800">Out:</Text> Not checked out</Text>
+                  ) : null}
+                  {checkOutTime ? (
+                    <Text className="text-gray-600 text-sm"><Text className="font-semibold text-gray-800">Out:</Text> {checkOutTime}</Text>
+                  ) : null}
+                  {visit.status === 'CHECKED_IN' ? (
+                    <Text className="text-gray-600 text-sm"><Text className="font-semibold text-gray-800">Duration:</Text> {duration || '0 min'} running</Text>
+                  ) : duration ? (
+                    <Text className="text-gray-600 text-sm"><Text className="font-semibold text-gray-800">Duration:</Text> {duration}</Text>
+                  ) : null}
                 </View>
 
                 {visit.status === 'APPROVED' && !visit.checkInAt && (

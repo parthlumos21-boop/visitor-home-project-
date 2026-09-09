@@ -9,7 +9,7 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
     todayStart.setHours(0, 0, 0, 0);
 
     const [totalVisits, pendingApprovals, currentlyInside, appointmentsToday, admin, totalEmployees, employeesByDeptRaw, totalSecurity] = await Promise.all([
-      prisma.newAppointment.count(),
+      prisma.visit.count(),
       prisma.newAppointment.count({
         where: { status: 'REGISTERED' },
       }),
@@ -50,6 +50,16 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
         employeesByDept[dept.department] = dept._count.id;
       }
     });
+
+    console.log('[Admin Dashboard]', JSON.stringify({
+      totalVisits,
+      pendingApprovals,
+      currentlyInside,
+      appointmentsToday,
+      totalEmployees,
+      totalSecurity,
+      source: 'postgres',
+    }));
 
     res.json({
       totalVisits,

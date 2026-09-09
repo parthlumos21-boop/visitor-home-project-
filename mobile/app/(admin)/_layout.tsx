@@ -100,6 +100,18 @@ export default function AdminLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="total-visits"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="visit-details/[id]"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

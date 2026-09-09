@@ -1,35 +1,70 @@
-﻿import React, { useEffect, useState, useCallback } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
-import { QrCode, Users, CalendarDays, CheckCircle, Bell, LogOut, ArrowLeft, ChevronRight } from 'lucide-react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+﻿import React, { useEffect, useState, useRef } from 'react';
+import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { QrCode, Users, CalendarDays, CheckCircle, Bell, LogOut, ChevronRight } from 'lucide-react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSecurityDashboardStats, SecurityDashboardStats } from '../../services/security';
 
 export default function SecurityDashboard() {
   const router = useRouter();
-  const { user, clearAuth } = useAuthStore();
+  const { user, token, isLoading: authLoading, clearAuth } = useAuthStore();
   const insets = useSafeAreaInsets();
   
   const [stats, setStats] = useState<SecurityDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authLoading && token) {
+      fetchStats();
+    } else if (!authLoading && !token) {
+      setLoading(false);
+    }
+  }, [authLoading, token]);
 
   useFocusEffect(
-    useCallback(() => {
-      fetchStats();
-    }, [])
+    React.useCallback(() => {
+      if (!authLoading && token) {
+        fetchStats(false);
+      }
+    }, [authLoading, token])
   );
 
-  const fetchStats = async () => {
+  const fetchStats = async (showLoader = true) => {
+    if (showLoader) {
+      setLoading(true);
+    }
     try {
       const data = await getSecurityDashboardStats();
-      setStats(data);
+      if (mounted.current) {
+        setStats(data);
+      }
     } catch (error) {
       console.error('Failed to load dashboard stats:', error);
     } finally {
-      setLoading(false);
+      if (mounted.current) {
+        setLoading(false);
+      }
     }
   };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchStats(false);
+    if (mounted.current) {
+      setRefreshing(false);
+    }
+  }, []);
 
   const handleLogout = () => {
     clearAuth();
@@ -45,14 +80,9 @@ export default function SecurityDashboard() {
       {/* Header */}
       <View 
         className="bg-white px-4 pb-3 border-b border-gray-200 flex-row items-center justify-between"
-        style={{ paddingTop: Math.max(insets.top, 16) }}
+        style={{ paddingTop: Math.max(insets.top, 16) + 8 }}
       >
-        <View className="flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <ArrowLeft color="#1f2937" size={24} />
-          </TouchableOpacity>
-          <Text className="text-xl font-bold text-gray-900">Security Dashboard</Text>
-        </View>
+        <Text className="text-xl font-bold text-gray-900">Security Dashboard</Text>
         <View className="flex-row items-center">
           <TouchableOpacity className="mr-4">
             <Bell color="#4b5563" size={24} />
@@ -63,7 +93,11 @@ export default function SecurityDashboard() {
         </View>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: 16 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />}
+      >
         {/* Welcome Section */}
         <View className="mb-6">
           <Text className="text-gray-500 text-lg">Welcome,</Text>

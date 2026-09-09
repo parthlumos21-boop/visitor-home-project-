@@ -33,6 +33,18 @@ export default function TotalVisits() {
 
   const getQrValue = (visit: any) => visit.qrCode?.token || visit.displayId || visit.id;
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return 'text-blue-700 bg-blue-50';
+      case 'PENDING': return 'text-amber-700 bg-amber-50';
+      case 'CHECKED_IN': return 'text-emerald-700 bg-emerald-50';
+      case 'COMPLETED': return 'text-gray-700 bg-gray-100';
+      case 'REJECTED': return 'text-red-700 bg-red-50';
+      case 'CANCELLED': return 'text-gray-500 bg-gray-50';
+      default: return 'text-gray-700 bg-gray-100';
+    }
+  };
+
   return (
     <View className="flex-1 bg-gray-50">
       {/* Header */}
@@ -61,7 +73,11 @@ export default function TotalVisits() {
           <Text className="text-center text-gray-500 mt-10">No visits found in database.</Text>
         ) : (
           visits.map((visit) => (
-            <View key={visit.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-4 shadow-sm flex-1">
+            <View
+              key={visit.id}
+              className="bg-white/70 border border-white/30 rounded-2xl p-4 mb-4 shadow-md active:opacity-85 flex-1"
+              style={{ aspectRatio: 1.4 }}
+            >
               {/* Top Bar */}
               <View className="flex-row items-center p-3 border-b border-gray-100 bg-gray-50">
                 <Check color="#22c55e" size={18} style={{ marginRight: 8 }} />
@@ -73,7 +89,9 @@ export default function TotalVisits() {
               <View className="p-4">
                 <View className="flex-row justify-between items-center mb-4">
                   <Text className="font-bold text-gray-900 text-lg">{visit.displayId || 'Visit ID unavailable'}</Text>
-                  <Text className="text-blue-700 font-bold text-sm tracking-wider">[ {visit.status} ]</Text>
+                  <View className={`rounded-full px-2 py-0.5 ${getStatusColor(visit.status)}`}>
+                    <Text className="text-[10px] font-bold uppercase tracking-wider">{visit.status}</Text>
+                  </View>
                 </View>
 
                 <View className="flex-row items-start">
@@ -126,8 +144,8 @@ export default function TotalVisits() {
                   onPress={() => openDetails(visit)}
                   className="flex-row justify-end items-center"
                 >
-                  <Text className="font-bold text-blue-600 text-base mr-1">View Details</Text>
-                  <ArrowRight color="#2563eb" size={18} />
+                  <Text className="font-bold text-blue-600 text-xs mr-1">View All Details</Text>
+                  <ArrowRight color="#2563eb" size={14} />
                 </TouchableOpacity>
               </View>
             </View>

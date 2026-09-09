@@ -172,7 +172,8 @@ export default function NewRegistrationScreen() {
           }
           mode="date"
           display="default"
-          onChange={(event, selectedDate) => {
+          onDismiss={() => setShowDatePicker(false)}
+          onValueChange={(_event, selectedDate) => {
             setShowDatePicker(Platform.OS === 'ios');
             if (selectedDate) {
               const d = selectedDate;

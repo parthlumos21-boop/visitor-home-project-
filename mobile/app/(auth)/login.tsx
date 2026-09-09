@@ -26,7 +26,10 @@ export default function LoginScreen() {
   const heading = useMemo(() => {
     if (showAdminPreview) return 'Admin';
     if (loginPreview?.exists && loginPreview.role === 'EMPLOYEE') return 'Employee login';
-    if (loginPreview?.exists && loginPreview.role) return `${loginPreview.role.replace('_', ' ')} login`;
+    if (loginPreview?.exists && loginPreview.role) {
+      const formattedRole = loginPreview.role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      return `${formattedRole} login`;
+    }
     if (loginPreview?.exists && loginPreview.name) return loginPreview.name;
     return 'Visitor Gate';
   }, [loginPreview, showAdminPreview]);

@@ -22,11 +22,7 @@ export const logMobileActivity = (payload: ActivityPayload) => {
     userRole: user?.role,
   };
 
-  if (payload.event.includes('error')) {
-    console.warn('[Mobile Activity]', logPayload);
-  } else {
-    console.log('[Mobile Activity]', logPayload);
-  }
+  console.log('[Mobile Activity]', logPayload);
 
   const logToNextUrl = (index: number) => {
     const baseUrl = API_URLS[index];

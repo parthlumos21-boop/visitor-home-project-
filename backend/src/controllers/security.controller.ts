@@ -14,46 +14,105 @@ export const scanQrCode = async (req: Request, res: Response): Promise<void> => 
     }
 
     let cleanToken = (token || '').toString().trim();
-    if ((cleanToken.startsWith('{') && cleanToken.endsWith('}')) || (cleanToken.startsWith('"') && cleanToken.endsWith('"'))) {
+    // Strip surrounding quotes/braces that some QR generators or scanners add
+    cleanToken = cleanToken.replace(/^["'{}\s]+|["'}\s]+$/g, '');
+    if (!cleanToken) {
+      res.status(400).json({ error: 'QR token is invalid' });
+      return;
+    }
+
+    if (
+      (cleanToken.startsWith('{') && cleanToken.endsWith('}')) ||
+      (cleanToken.startsWith('[') && cleanToken.endsWith(']')) ||
+      (cleanToken.startsWith('"') && cleanToken.endsWith('"'))
+    ) {
       try {
         const parsed = JSON.parse(cleanToken);
         if (typeof parsed === 'string') {
           cleanToken = parsed.trim();
-        } else if (typeof parsed === 'object' && parsed !== null) {
-          cleanToken = parsed.token || parsed.displayId || parsed.id || cleanToken;
+        } else if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+          cleanToken = (parsed as any).token || (parsed as any).displayId || (parsed as any).id || cleanToken;
         }
       } catch (e) {}
     }
 
     // 1. Find by QR token
-    const qrCode = await prisma.qrCode.findUnique({
+    let qrCode = await prisma.qrCode.findUnique({
       where: { token: cleanToken },
       include: {
         visit: {
           include: {
             visitor: true,
-            host: { select: { id: true, name: true, email: true, department: true, role: true } }
-          }
-        }
-      }
+            host: { select: { id: true, name: true, email: true, department: true, role: true } },
+          },
+        },
+      },
     });
+
+    if (
+      qrCode &&
+      qrCode.expiresAt &&
+      qrCode.expiresAt < new Date() &&
+      qrCode.visit?.status !== VisitStatus.CHECKED_IN
+    ) {
+      res.status(400).json({ error: 'EXPIRED PASS - Pass has already been used for check-in' });
+      return;
+    }
 
     let visit = qrCode?.visit || null;
 
-    // 2. Fallback: Find visit directly by displayId or id
+    // 2. Fallback: Find visit directly by displayId, id, or visitorId
     if (!visit) {
       visit = await prisma.visit.findFirst({
         where: {
           OR: [
             { displayId: cleanToken },
-            { id: cleanToken }
-          ]
+            { id: cleanToken },
+            { visitorId: cleanToken },
+          ],
         },
         include: {
           visitor: true,
-          host: { select: { id: true, name: true, email: true, department: true, role: true } }
-        }
+          host: { select: { id: true, name: true, email: true, department: true, role: true } },
+        },
       });
+    }
+
+    // 3. Fallback: admin visitor cards may encode the NewAppointment id/appointmentId.
+    if (!visit) {
+      const appointment = await prisma.newAppointment.findFirst({
+        where: {
+          OR: [
+            { id: cleanToken },
+            { appointmentId: cleanToken },
+          ],
+        },
+      });
+
+      if (appointment) {
+        visit = await prisma.visit.findFirst({
+          where: {
+            visitor: {
+              OR: [
+                { phone: appointment.mobile },
+                ...(appointment.email ? [{ email: appointment.email }] : []),
+              ],
+            },
+            host: {
+              OR: [
+                { name: appointment.personToMeet },
+                { id: appointment.personToMeet },
+              ],
+            },
+            scheduledAt: parseAppointmentDateTime(appointment.visitDate, appointment.arrivalTime),
+          },
+          include: {
+            visitor: true,
+            host: { select: { id: true, name: true, email: true, department: true, role: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+      }
     }
 
     if (!visit) {
@@ -79,6 +138,7 @@ export const scanQrCode = async (req: Request, res: Response): Promise<void> => 
       status: visit.status,
       checkInAt: visit.checkInAt ? new Date(visit.checkInAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : null,
       checkOutAt: visit.checkOutAt ? new Date(visit.checkOutAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : null,
+      durationMinutes: visit.durationMinutes,
       allowCheckIn: visit.status === VisitStatus.APPROVED && !visit.checkInAt,
       allowCheckOut: visit.status === VisitStatus.CHECKED_IN || (!!visit.checkInAt && !visit.checkOutAt),
     };
@@ -94,6 +154,29 @@ export const scanQrCode = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+const parseAppointmentDateTime = (visitDate: string, arrivalTime?: string | null) => {
+  const [day, month, year] = visitDate.split('-').map(Number);
+  const scheduledAt = day && month && year ? new Date(year, month - 1, day) : new Date(visitDate);
+
+  if (Number.isNaN(scheduledAt.getTime())) {
+    return undefined;
+  }
+
+  scheduledAt.setHours(9, 0, 0, 0);
+  const match = arrivalTime?.trim().match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
+  if (match) {
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const period = match[3].toUpperCase();
+
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    scheduledAt.setHours(hours, minutes, 0, 0);
+  }
+
+  return scheduledAt;
+};
+
 export const checkInVisitor = async (req: Request, res: Response): Promise<void> => {
   try {
     const { visitId } = req.body;
@@ -105,6 +188,8 @@ export const checkInVisitor = async (req: Request, res: Response): Promise<void>
       where: { id: visitId },
       data: { 
         checkInAt: new Date(),
+        checkOutAt: null,
+        durationMinutes: null,
         status: VisitStatus.CHECKED_IN
       },
       include: {
@@ -112,6 +197,11 @@ export const checkInVisitor = async (req: Request, res: Response): Promise<void>
         host: { select: { id: true, name: true, email: true, department: true, role: true } }
       }
     });
+      // Expire QR pass
+      const qrCode = await prisma.qrCode.findFirst({ where: { visitId: visit.id } });
+      if (qrCode) {
+        await prisma.qrCode.update({ where: { id: qrCode.id }, data: { expiresAt: new Date() } });
+      }
 
     if (visit.visitor?.phone || visit.visitor?.email) {
       await prisma.newAppointment.updateMany({
@@ -158,10 +248,24 @@ export const checkOutVisitor = async (req: Request, res: Response): Promise<void
       res.status(400).json({ error: 'Visit ID is required' });
       return;
     }
+    const existingVisit = await prisma.visit.findUnique({
+      where: { id: visitId },
+      select: { checkInAt: true },
+    });
+
+    if (!existingVisit?.checkInAt) {
+      res.status(400).json({ error: 'Visitor must be checked in before checkout' });
+      return;
+    }
+
+    const checkOutAt = new Date();
+    const durationMinutes = Math.max(0, Math.ceil((checkOutAt.getTime() - existingVisit.checkInAt.getTime()) / 60000));
+
     const visit = await prisma.visit.update({
       where: { id: visitId },
       data: { 
-        checkOutAt: new Date(),
+        checkOutAt,
+        durationMinutes,
         status: VisitStatus.COMPLETED
       },
       include: {
@@ -327,12 +431,20 @@ export const getSecurityDashboardStats = async (req: AuthenticatedRequest, res: 
     todayEnd.setHours(23, 59, 59, 999);
 
     const now = new Date();
+    const todayVisitWhere = {
+      status: { not: VisitStatus.COMPLETED },
+      OR: [
+        { scheduledAt: { gte: todayStart, lte: todayEnd } },
+        { checkInAt: { gte: todayStart, lte: todayEnd } },
+        { checkOutAt: { gte: todayStart, lte: todayEnd } },
+      ],
+    };
 
     const [todaysVisitors, insideNow, upcoming, checkedOut] = await Promise.all([
-      prisma.visit.count({ where: { scheduledAt: { gte: todayStart, lte: todayEnd } } }),
+      prisma.visit.count({ where: todayVisitWhere }),
       prisma.visit.count({ where: { status: VisitStatus.CHECKED_IN, checkInAt: { not: null }, checkOutAt: null } }),
       prisma.visit.count({ where: { status: VisitStatus.APPROVED, scheduledAt: { gte: now } } }),
-      prisma.visit.count({ where: { status: VisitStatus.COMPLETED, scheduledAt: { gte: todayStart, lte: todayEnd } } }),
+      prisma.visit.count({ where: { status: VisitStatus.COMPLETED, checkOutAt: { gte: todayStart, lte: todayEnd } } }),
     ]);
 
     res.json({ todaysVisitors, insideNow, upcoming, checkedOut });
@@ -360,23 +472,35 @@ export const getSecurityVisits = async (req: AuthenticatedRequest, res: Response
       where.checkInAt = { not: null };
       where.checkOutAt = null;
     } else if (filter === 'todays') {
-      where.scheduledAt = { gte: todayStart, lte: todayEnd };
+      where.status = { not: VisitStatus.COMPLETED };
+      where.OR = [
+        { scheduledAt: { gte: todayStart, lte: todayEnd } },
+        { checkInAt: { gte: todayStart, lte: todayEnd } },
+        { checkOutAt: { gte: todayStart, lte: todayEnd } },
+      ];
     } else if (filter === 'checkedOut') {
       where.status = VisitStatus.COMPLETED;
-      where.scheduledAt = { gte: todayStart, lte: todayEnd };
+      where.checkOutAt = { gte: todayStart, lte: todayEnd };
     }
 
     const visits = await prisma.visit.findMany({
       where,
       include: {
         visitor: true,
+        qrCode: { select: { token: true, expiresAt: true } },
         host: {
           select: { id: true, name: true, email: true, department: true },
         },
       },
-      orderBy: { scheduledAt: 'asc' },
-      take: 100,
+      orderBy: { createdAt: 'desc' },
+      take: 1000,
     });
+
+    console.log('[Security Visits]', JSON.stringify({
+      filter: filter || 'all',
+      count: visits.length,
+      source: 'postgres',
+    }));
 
     res.json(visits);
   } catch (error) {

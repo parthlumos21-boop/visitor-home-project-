@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, ScrollView } from 'react-native';
 import { useNetwork } from '../../store/NetworkContext';
-import { CheckCircle, User, ScanLine, ArrowLeft, Building2, Phone, Mail, Clock, Calendar, LogIn, LogOut } from 'lucide-react-native';
+import { CheckCircle, User, ScanLine, Building2, Phone, Mail, Clock, Calendar, LogIn, LogOut } from 'lucide-react-native';
 import api from '../../services/api';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ export default function ScanScreen() {
   const [actionLoading, setActionLoading] = useState(false);
   const [scanned, setScanned] = useState(false);
   const [error, setError] = useState('');
+  const isExpiredPass = error.toUpperCase().includes('EXPIRED PASS');
 
   if (!permission) {
     return <View />;
@@ -74,7 +75,9 @@ export default function ScanScreen() {
     setActionLoading(true);
     try {
       await checkInVisitorApi(scanDetails.visitId);
-      Alert.alert('Success', 'Visitor checked in successfully!');
+      Alert.alert('Success', 'Visitor checked in successfully!', [
+        { text: 'View Today', onPress: () => router.replace('/(security)/visitors?filter=todays') },
+      ]);
       setScanDetails((prev: any) => prev ? {
         ...prev,
         status: 'CHECKED_IN',
@@ -94,7 +97,9 @@ export default function ScanScreen() {
     setActionLoading(true);
     try {
       await checkOutVisitorApi(scanDetails.visitId);
-      Alert.alert('Success', 'Visitor checked out successfully!');
+      Alert.alert('Success', 'Visitor checked out successfully!', [
+        { text: 'View Checked Out', onPress: () => router.replace('/(security)/visitors?filter=checkedOut') },
+      ]);
       setScanDetails((prev: any) => prev ? {
         ...prev,
         status: 'COMPLETED',
@@ -139,10 +144,8 @@ export default function ScanScreen() {
             onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
           />
           <View style={StyleSheet.absoluteFill} className="bg-black/50 justify-between px-6 pb-12">
-            <View style={{ paddingTop: Math.max(insets.top, 16) }} className="flex-row items-center justify-between">
-              <TouchableOpacity onPress={() => router.back()} className="bg-black/40 p-2.5 rounded-full">
-                <ArrowLeft color="white" size={24} />
-              </TouchableOpacity>
+            <View style={{ paddingTop: Math.max(insets.top, 16) + 8 }} className="flex-row items-center justify-between">
+              <View className="w-10" />
               <Text className="text-white font-bold text-lg">Scan Visitor QR</Text>
               <View className="w-10" />
             </View>
@@ -161,10 +164,9 @@ export default function ScanScreen() {
           {/* Header */}
           <View 
             className="bg-white px-4 pb-3 border-b border-gray-200 flex-row items-center justify-between"
-            style={{ paddingTop: Math.max(insets.top, 16) }}
+            style={{ paddingTop: Math.max(insets.top, 16) + 8 }}
           >
             <TouchableOpacity onPress={resetScanner} className="flex-row items-center">
-              <ArrowLeft color="#1f2937" size={24} className="mr-2" />
               <Text className="text-lg font-bold text-gray-900">Back to Scanner</Text>
             </TouchableOpacity>
           </View>
@@ -179,7 +181,9 @@ export default function ScanScreen() {
               <View className="w-full">
                 {error ? (
                   <View className="bg-red-50 rounded-2xl p-6 border border-red-200 items-center mb-6">
-                    <Text className="text-red-600 font-bold text-xl mb-2 text-center">Invalid Pass</Text>
+                    <Text className="text-red-600 font-bold text-xl mb-2 text-center">
+                      {isExpiredPass ? 'Expired Pass' : 'Invalid Pass'}
+                    </Text>
                     <Text className="text-red-500 text-center text-base mb-6">{error}</Text>
                     <TouchableOpacity 
                       className="bg-red-600 px-6 py-3 rounded-xl"

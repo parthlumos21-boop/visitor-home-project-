@@ -330,7 +330,7 @@ export default function EmployeeList() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top + 64}
     >
-      <View className="bg-white border-b border-gray-200 pb-3" style={{ paddingTop: insets.top + 8 }}>
+      <View className="bg-white border-b border-gray-200 pb-3" style={{ paddingTop: insets.top + 16 }}>
         <View className="flex-row items-center px-4 justify-between">
           <View className="flex-row items-center">
             <TouchableOpacity onPress={() => (showAddForm ? closeAddForm() : router.back())} className="mr-3">

@@ -44,7 +44,7 @@ export default function EmployeeDetails() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <View className="bg-white border-b border-gray-200 pb-3" style={{ paddingTop: insets.top + 8 }}>
+      <View className="bg-white border-b border-gray-200 pb-3" style={{ paddingTop: insets.top + 16 }}>
         <View className="flex-row items-center px-4">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
             <ChevronLeft color="#111827" size={28} />

@@ -336,8 +336,8 @@ export class NotificationService {
   static async notifyAdminOfVisitorArrival(visit: any) {
     return this.sendRoleNotification(Role.SUPER_ADMIN, {
       type: 'VISITOR_CHECKED_IN',
-      title: 'Visitor Checked In',
-      message: `${visit.visitor.name} has arrived at the gate.\n${visit.displayId || visit.id}`,
+      title: 'Approval Required: Visitor Arrived',
+      message: `${visit.visitor.name} has been scanned at the gate by security and is awaiting your approval.\n${visit.displayId || visit.id}`,
       visitId: visit.id,
       targetScreen: 'VisitDetails',
       data: { visitId: visit.id }
@@ -347,8 +347,8 @@ export class NotificationService {
   static async notifyHostOfVisitorArrival(visit: any) {
     return this.sendNotification({
       type: 'VISITOR_CHECKED_IN',
-      title: 'Visitor Arrived',
-      message: `${visit.visitor.name} has arrived at the gate.\n${visit.displayId || visit.id}`,
+      title: 'Approval Required: Visitor Arrived',
+      message: `${visit.visitor.name} has been scanned at the gate by security and is awaiting your approval.\n${visit.displayId || visit.id}`,
       visitId: visit.id,
       recipientId: visit.host.id,
       recipientRole: visit.host.role,

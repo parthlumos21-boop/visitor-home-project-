@@ -208,7 +208,7 @@ export default function AddVisitorScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <View className="flex-row items-center border-b border-gray-200 bg-white px-4 pb-4 pt-12">
+      <View className="flex-row items-center border-b border-gray-200 bg-white px-4 pb-4 pt-14">
         <TouchableOpacity className="mr-2 h-11 w-11 items-center justify-center" onPress={() => router.back()}>
           <ArrowLeft color="#111827" size={23} />
         </TouchableOpacity>
@@ -243,7 +243,8 @@ export default function AddVisitorScreen() {
             value={new Date()}
             mode="time"
             display="default"
-            onChange={(_event, selectedDate) => {
+            onDismiss={() => setShowArrivalPicker(false)}
+            onValueChange={(_event, selectedDate) => {
               setShowArrivalPicker(Platform.OS === 'ios');
               if (selectedDate) {
                 let hours = selectedDate.getHours();

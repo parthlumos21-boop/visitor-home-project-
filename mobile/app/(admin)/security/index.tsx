@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Shield, Plus, ArrowLeft, UserCheck, Phone, Mail, UserX, Edit3, KeyRound } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSecurityGuards, createSecurityGuard, updateSecurityGuard, deactivateSecurityGuard, SecurityGuard } from '../../../services/security';
@@ -22,21 +22,32 @@ export default function AdminSecurityScreen() {
   const [designation, setDesignation] = useState('Security Guard');
   const [saving, setSaving] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchGuards();
-    }, [])
-  );
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchGuards();
+  }, []);
 
   const fetchGuards = async () => {
     setLoading(true);
     try {
       const data = await getSecurityGuards();
-      setGuards(data || []);
+      if (mounted.current) {
+        setGuards(data || []);
+      }
     } catch (error) {
       console.error('Failed to fetch security guards:', error);
     } finally {
-      setLoading(false);
+      if (mounted.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -132,7 +143,7 @@ export default function AdminSecurityScreen() {
       {/* Header */}
       <View 
         className="bg-white px-4 pb-3 border-b border-gray-200 flex-row items-center justify-between"
-        style={{ paddingTop: Math.max(insets.top, 16) }}
+        style={{ paddingTop: Math.max(insets.top, 16) + 8 }}
       >
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
