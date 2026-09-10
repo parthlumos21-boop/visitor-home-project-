@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState, useRef } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { QrCode, Users, CalendarDays, CheckCircle, Bell, LogOut, ChevronRight } from 'lucide-react-native';
+import { QrCode, Users, CheckCircle, Bell, LogOut, ChevronRight } from 'lucide-react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -150,20 +150,6 @@ export default function SecurityDashboard() {
               </View>
               <Text className="text-2xl font-bold text-gray-900 mb-1">{stats?.insideNow?.toString().padStart(2, '0') || '00'}</Text>
               <Text className="text-gray-500 text-sm uppercase font-semibold">Inside Now</Text>
-            </TouchableOpacity>
-
-            {/* Upcoming Card */}
-            <TouchableOpacity 
-              onPress={() => navigateToList('upcoming')}
-              activeOpacity={0.7}
-              className="w-[48%] bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100"
-            >
-              <View className="flex-row justify-between items-start mb-3">
-                <CalendarDays color="#f59e0b" size={28} />
-                <ChevronRight color="#d1d5db" size={20} />
-              </View>
-              <Text className="text-2xl font-bold text-gray-900 mb-1">{stats?.upcoming?.toString().padStart(2, '0') || '00'}</Text>
-              <Text className="text-gray-500 text-sm uppercase font-semibold">Upcoming</Text>
             </TouchableOpacity>
 
             {/* Checked Out Card */}

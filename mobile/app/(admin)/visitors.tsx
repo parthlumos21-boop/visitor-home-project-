@@ -47,7 +47,7 @@ export default function VisitorsScreen() {
           activeOpacity={0.78}
         >
           <Plus color="#ffffff" size={20} />
-          <Text className="ml-2 font-bold text-white">Add New Visitor</Text>
+          <Text className="ml-2 font-bold text-white">New Appointment</Text>
         </TouchableOpacity>
       </View>
 

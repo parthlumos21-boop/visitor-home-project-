@@ -1,5 +1,5 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable, useWindowDimensions, RefreshControl } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable, useWindowDimensions, RefreshControl, Image } from 'react-native';
 import { Bell, CalendarDays, Clock, LogOut, UserCheck, Users, X, Shield, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -140,7 +140,14 @@ export default function AdminDashboard() {
     <View className="flex-1 bg-gray-50">
       <View className="bg-white border-b border-gray-200 px-4 pb-3" style={{ paddingTop: insets.top + 16 }}>
         <View className="flex-row items-center justify-between">
-          <Text className="flex-1 text-lg font-bold text-gray-950">Admin</Text>
+          <View className="flex-row items-center flex-1">
+            <Image
+              source={require('../../assets/logo.png')}
+              style={{ width: 64, height: 64, marginRight: 10 }}
+              resizeMode="contain"
+            />
+            <Text className="text-lg font-bold text-gray-950">Admin</Text>
+          </View>
           <TouchableOpacity
             onPress={handleOpenNotifications}
             accessibilityRole="button"
@@ -168,18 +175,18 @@ export default function AdminDashboard() {
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />}
       >
-        <View className="flex-row justify-between items-start">
-          <View>
-            <Text className="text-xl font-bold text-gray-950">Welcome, {adminName || 'Admin'}</Text>
+        <View className="flex-row items-start justify-between gap-3">
+          <View className="min-w-0 flex-1 pr-1">
+            <Text className="text-xl font-bold text-gray-950" numberOfLines={2}>Welcome, {adminName || 'Admin'}</Text>
             <Text className="mt-1 text-base text-gray-600">Manage visitors and appointments</Text>
           </View>
           <TouchableOpacity 
-            onPress={() => router.push('/(visitor)/new-registration')} 
-            className="flex-row items-center bg-blue-600 px-3 py-2 rounded-lg shadow-sm"
+            onPress={() => router.push('/(admin)/add-visitor')} 
+            className="h-10 shrink-0 flex-row items-center rounded-lg bg-blue-600 px-3 shadow-sm"
             activeOpacity={0.78}
           >
              <Plus color="#ffffff" size={18} />
-             <Text className="text-white font-bold ml-1 text-sm">Add New</Text>
+             <Text className="ml-1 text-sm font-bold text-white">Appointment</Text>
           </TouchableOpacity>
         </View>
 

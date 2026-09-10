@@ -123,7 +123,7 @@ export const getVisitorHosts = async (_req: AuthenticatedRequest, res: Response)
     const hosts = await prisma.user.findMany({
       where: { role: Role.EMPLOYEE, status: 'ACTIVE' },
       orderBy: { name: 'asc' },
-      select: { id: true, name: true, department: true },
+      select: { id: true, name: true, email: true, department: true },
     });
 
     res.json(hosts);

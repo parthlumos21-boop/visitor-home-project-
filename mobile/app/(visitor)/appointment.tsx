@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { User, Phone, Calendar as CalendarIcon, Clock, Handshake, Building2 } from 'lucide-react-native';
+import { User, Phone, Calendar as CalendarIcon, Clock, Handshake, Building2, QrCode as QrIcon } from 'lucide-react-native';
+import QRCode from 'react-native-qrcode-svg';
 
 export default function VisitorAppointments() {
   const router = useRouter();
@@ -18,24 +19,38 @@ export default function VisitorAppointments() {
   const purpose = params.purpose || 'No Purpose Provided';
   const personToMeet = params.personToMeet || 'No Person Provided';
   const department = params.department || 'No Department Provided';
-  const appointmentId = params.appointmentId || 'APT-000000';
+  const appointmentId = (params.appointmentId as string) || 'APT-000000';
+
+  const qrPayload = JSON.stringify({
+    appointmentId,
+    name: visitorName,
+    mobile,
+    visitDate,
+    personToMeet,
+  });
+
+  const status = (params.status as string) || 'REGISTERED';
 
   return (
     <ScrollView className="flex-1 bg-gray-50 px-4 pt-6">
-      <Text className="text-sm font-bold text-gray-500 tracking-widest mb-4">Appointment Deatils</Text>
+      <Text className="text-sm font-bold text-gray-500 tracking-widest mb-4">Appointment Details</Text>
 
       <View className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         {/* Header */}
-        <View className="bg-blue-50 px-5 py-4 border-b border-blue-100">
-          <Text className="text-blue-800 font-bold tracking-wider">APPOINTMENT CONFIRMED</Text>
+        <View className={`px-5 py-4 border-b ${status === 'APPROVED' ? 'bg-green-50 border-green-100' : 'bg-amber-50 border-amber-100'}`}>
+          <Text className={`font-bold tracking-wider ${status === 'APPROVED' ? 'text-green-800' : 'text-amber-800'}`}>
+            {status === 'APPROVED' ? 'APPOINTMENT APPROVED' : 'AWAITING APPROVAL'}
+          </Text>
         </View>
 
         {/* Content */}
         <View className="p-5">
           <View className="flex-row justify-between items-center mb-6">
             <Text className="text-lg font-bold text-gray-900">{appointmentId}</Text>
-            <View className="bg-green-100 px-3 py-1 rounded-full">
-              <Text className="text-green-800 font-semibold text-xs tracking-wider">REGISTERED</Text>
+            <View className={`px-3 py-1 rounded-full ${status === 'APPROVED' ? 'bg-green-100' : 'bg-amber-100'}`}>
+              <Text className={`font-semibold text-xs tracking-wider ${status === 'APPROVED' ? 'text-green-800' : 'text-amber-800'}`}>
+                {status}
+              </Text>
             </View>
           </View>
 
@@ -50,6 +65,20 @@ export default function VisitorAppointments() {
               <Text className="text-gray-700 font-medium ml-3 text-base">{mobile}</Text>
             </View>
           </View>
+
+          {/* QR Code Section (Only rendered if APPROVED) */}
+          {status === 'APPROVED' ? (
+            <View className="items-center my-4 py-4 bg-gray-50 rounded-xl border border-gray-200">
+              <QRCode value={qrPayload} size={150} />
+              <Text className="text-xs text-gray-500 mt-3 font-medium">Scan QR at Gate Security for Entry</Text>
+            </View>
+          ) : (
+            <View className="items-center my-4 p-4 bg-amber-50 rounded-xl border border-amber-200">
+              <QrIcon color="#d97706" size={32} />
+              <Text className="text-amber-900 font-semibold text-sm mt-2 text-center">QR Code Pending Approval</Text>
+              <Text className="text-amber-700 text-xs mt-1 text-center">Approval request sent to Host Employee & Admin.</Text>
+            </View>
+          )}
 
           <View className="h-px bg-gray-100 my-4" />
 

@@ -4,10 +4,12 @@ import { ClipboardList, Clock, History, Plus, LogOut, Mail, ChevronRight } from 
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { getVisitorInvitations } from '../../services/visits';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function VisitorDashboard() {
   const router = useRouter();
   const { user, clearAuth } = useAuthStore();
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [invitations, setInvitations] = useState<any[]>([]);
 
@@ -51,12 +53,12 @@ export default function VisitorDashboard() {
   return (
     <ScrollView 
       className="flex-1 bg-gray-50" 
-      contentContainerStyle={{ padding: 16 }}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16, paddingTop: Math.max(insets.top, 16) + 12 }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
       }
     >
-      <View className="flex-row justify-between items-center mt-16 mb-6 px-1">
+      <View className="flex-row justify-between items-center mb-6 px-1">
         <Text className="text-2xl font-black text-gray-950 tracking-tight">Visitor</Text>
 
         <TouchableOpacity onPress={handleLogout} className="p-3 bg-white rounded-full shadow-sm border border-gray-200">
@@ -78,7 +80,6 @@ export default function VisitorDashboard() {
       <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
         <Text className="text-xl font-bold text-gray-900 mb-1">Welcome, {user?.name || 'Visitor'}</Text>
         <Text className="text-xs text-gray-500 mb-3">Your Visitor Dashboard</Text>
-        <Text className="text-sm text-gray-600 font-medium">Manage your appointments.</Text>
       </View>
 
       

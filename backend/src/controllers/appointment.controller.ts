@@ -69,6 +69,7 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
     const visitorEmail = email?.trim() || null;
     const visitorName = fullName.trim();
     const hostName = personToMeet.trim();
+    const hostEmail = hostName.toLowerCase();
     const scheduledAt = parseVisitDateTime(visitDate.trim(), arrivalTime);
 
     if (!scheduledAt) {
@@ -76,31 +77,52 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
       return;
     }
 
-    const [host, creator] = await Promise.all([
-      prisma.user.findFirst({
-        where: {
-          role: 'EMPLOYEE',
-          status: 'ACTIVE',
-          OR: [{ name: hostName }, { id: hostName }],
-        },
-        select: { id: true, name: true, department: true },
-      }),
-      (req as any).user?.id
-        ? prisma.user.findUnique({
-            where: { id: (req as any).user.id },
-            select: { id: true, name: true, role: true },
-          })
-        : prisma.user.findFirst({
-            where: { role: 'SUPER_ADMIN', status: 'ACTIVE' },
-            orderBy: { createdAt: 'asc' },
-            select: { id: true, name: true, role: true },
-          }),
-    ]);
+    const cleanHostName = hostName.trim();
+
+    let host = await prisma.user.findFirst({
+      where: {
+        status: 'ACTIVE',
+        OR: [
+          { name: { equals: cleanHostName, mode: 'insensitive' } },
+          { name: { contains: cleanHostName, mode: 'insensitive' } },
+          { id: cleanHostName },
+          { email: { equals: cleanHostName, mode: 'insensitive' } },
+          { email: { contains: cleanHostName, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, name: true, department: true, role: true },
+    });
 
     if (!host) {
-      res.status(400).json({ error: `Employee "${hostName}" was not found` });
+      host = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { name: { contains: cleanHostName, mode: 'insensitive' } },
+            { email: { contains: cleanHostName, mode: 'insensitive' } },
+          ],
+        },
+        select: { id: true, name: true, department: true, role: true },
+      });
+    }
+
+    const creator = (req as any).user?.id
+      ? await prisma.user.findUnique({
+          where: { id: (req as any).user.id },
+          select: { id: true, name: true, role: true },
+        })
+      : await prisma.user.findFirst({
+          where: { role: 'SUPER_ADMIN', status: 'ACTIVE' },
+          orderBy: { createdAt: 'asc' },
+          select: { id: true, name: true, role: true },
+        });
+
+    if (!host) {
+      console.error(`[Appointment Error] Host Employee "${hostName}" was not found in PostgreSQL User table.`);
+      res.status(400).json({ error: `Employee "${hostName}" was not found in active employees list` });
       return;
     }
+
+    console.log(`[Appointment Success] Matched Host Employee in Postgres: ID=${host.id}, Name=${host.name}, Role=${host.role}, Dept=${host.department}`);
 
     const existingVisitor = await prisma.visitorProfile.findFirst({
       where: {
@@ -265,7 +287,7 @@ export const approveNewAppointment = async (req: Request, res: Response): Promis
     const host = await prisma.user.findFirst({
       where: {
         role: 'EMPLOYEE',
-        OR: [{ name: appointment.personToMeet }, { id: appointment.personToMeet }],
+        OR: [{ name: appointment.personToMeet }, { id: appointment.personToMeet }, { email: appointment.personToMeet.toLowerCase() }],
       },
       select: { id: true },
     });
@@ -352,7 +374,7 @@ export const rejectNewAppointment = async (req: Request, res: Response): Promise
     const host = await prisma.user.findFirst({
       where: {
         role: 'EMPLOYEE',
-        OR: [{ name: appointment.personToMeet }, { id: appointment.personToMeet }],
+        OR: [{ name: appointment.personToMeet }, { id: appointment.personToMeet }, { email: appointment.personToMeet.toLowerCase() }],
       },
       select: { id: true },
     });

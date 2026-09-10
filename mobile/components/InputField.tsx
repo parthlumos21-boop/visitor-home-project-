@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { View, Text, TextInput, TextInputProps, TouchableOpacity } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
 
@@ -6,9 +6,11 @@ interface InputFieldProps extends TextInputProps {
   label: string;
   error?: string;
   className?: string;
+  inputClassName?: string;
+  leftIcon?: ReactNode;
 }
 
-export const InputField: React.FC<InputFieldProps> = ({ label, error, className = '', secureTextEntry, ...props }) => {
+export const InputField: React.FC<InputFieldProps> = ({ label, error, className = '', inputClassName = '', leftIcon, secureTextEntry, ...props }) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const isSecure = secureTextEntry && !isPasswordVisible;
 
@@ -16,10 +18,15 @@ export const InputField: React.FC<InputFieldProps> = ({ label, error, className 
     <View className={`mb-4 ${className}`}>
       <Text className="text-gray-700 font-medium mb-1.5 ml-1">{label}</Text>
       <View className="relative justify-center">
+        {leftIcon ? (
+          <View className="absolute left-4 z-10">
+            {leftIcon}
+          </View>
+        ) : null}
         <TextInput
-          className={`bg-white border rounded-xl px-4 py-3 text-base text-gray-900 ${
+          className={`bg-white border rounded-full px-4 py-3 text-base text-gray-900 ${
             error ? 'border-red-500' : 'border-gray-300'
-          } ${secureTextEntry ? 'pr-12' : ''}`}
+          } ${leftIcon ? 'pl-11' : ''} ${secureTextEntry ? 'pr-12' : ''} ${inputClassName}`}
           placeholderTextColor="#9ca3af"
           secureTextEntry={isSecure}
           {...props}

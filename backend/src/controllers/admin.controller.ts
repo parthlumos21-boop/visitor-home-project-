@@ -1,4 +1,4 @@
-﻿import { Response } from 'express';
+import { Response } from 'express';
 import { Role, VisitStatus } from '@prisma/client';
 import { prisma } from '../app';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
@@ -11,7 +11,7 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
     const [totalVisits, pendingApprovals, currentlyInside, appointmentsToday, admin, totalEmployees, employeesByDeptRaw, totalSecurity] = await Promise.all([
       prisma.visit.count(),
       prisma.newAppointment.count({
-        where: { status: 'REGISTERED' },
+        where: { status: { in: ['REGISTERED', 'PENDING'] } },
       }),
       prisma.visit.count({
         where: {

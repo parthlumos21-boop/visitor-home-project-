@@ -5,6 +5,14 @@ import { useRouter } from 'expo-router';
 import { ChevronDown, X, Calendar } from 'lucide-react-native';
 import { createNewAppointment } from '../../services/appointments';
 import api from '../../services/api';
+import { getApiErrorMessage } from '../../services/errorMessage';
+
+type HostOption = {
+  id: string;
+  name: string;
+  email?: string | null;
+  department?: string | null;
+};
 
 const SelectField = ({ label, value, options, onSelect }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -52,6 +60,53 @@ const SelectField = ({ label, value, options, onSelect }: any) => {
   );
 };
 
+const HostSelectField = ({ label, value, displayValue, options, onSelect }: any) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  return (
+    <View className="mb-4">
+      <Text className="text-gray-700 font-medium mb-1">{label}</Text>
+      <TouchableOpacity
+        className="flex-row justify-between items-center bg-gray-50 border border-gray-200 p-3 rounded-lg"
+        onPress={() => setModalVisible(true)}
+      >
+        <Text className={value ? "text-black" : "text-gray-400"}>
+          {displayValue || `Select ${label.replace(' *', '').toLowerCase()}`}
+        </Text>
+        <ChevronDown color="#9ca3af" size={20} />
+      </TouchableOpacity>
+
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <View className="flex-1 justify-end bg-black/50">
+          <View className="bg-white rounded-t-3xl p-6 h-1/2">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-xl font-bold">Select {label.replace(' *', '')}</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <X color="#000" size={24} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={options}
+              keyExtractor={(item: HostOption) => item.id}
+              renderItem={({ item }: { item: HostOption }) => (
+                <TouchableOpacity
+                  className="p-4 border-b border-gray-100"
+                  onPress={() => {
+                    onSelect(item);
+                    setModalVisible(false);
+                  }}
+                >
+                  <Text className="text-lg text-gray-950">{item.name}</Text>
+                  {item.department ? <Text className="mt-1 text-sm text-gray-500">{item.department}</Text> : null}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
 const InputField = ({ label, placeholder, optional = false, style, icon, onIconPress, ...props }: any) => (
   <View className="mb-4">
     <Text className="text-gray-700 font-medium mb-1">{label} {!optional && '*'}</Text>
@@ -76,7 +131,7 @@ export default function NewRegistrationScreen() {
   const router = useRouter();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hosts, setHosts] = useState<any[]>([]);
+  const [hosts, setHosts] = useState<HostOption[]>([]);
 
   const [form, setForm] = useState({
     fullName: '', mobile: '', email: '', company: '',
@@ -87,7 +142,7 @@ export default function NewRegistrationScreen() {
     })(),
     arrivalTime: '', vehicleNumber: '', notes: ''
   });
-  const hostNames = useMemo(() => hosts.map((host) => host.name), [hosts]);
+  const selectedHost = useMemo(() => hosts.find((host) => host.id === form.personToMeet), [form.personToMeet, hosts]);
 
   useEffect(() => {
     const loadHosts = async () => {
@@ -108,6 +163,11 @@ export default function NewRegistrationScreen() {
       return;
     }
 
+    if (!hosts.some((host) => host.id === form.personToMeet.trim())) {
+      Alert.alert('Employee Required', 'Please select a valid employee in Person to Meet.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const appointment = await createNewAppointment(form);
@@ -125,17 +185,18 @@ export default function NewRegistrationScreen() {
         params: {
           ...form,
           appointmentId: appointment.appointmentId,
+          status: 'PENDING',
         },
       });
     } catch (error) {
-      Alert.alert('Server Error', 'Unable to save appointment. Please try again.');
+      Alert.alert('Server Error', getApiErrorMessage(error, 'Unable to save appointment. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <ScrollView className="flex-1 bg-white px-4 pt-6">
+    <ScrollView className="flex-1 bg-white px-4 pt-12 pb-8">
       
       {/* BASIC DETAILS */}
       <Text className="text-sm font-bold text-gray-500 tracking-widest mb-4">BASIC DETAILS</Text>
@@ -150,9 +211,8 @@ export default function NewRegistrationScreen() {
       <Text className="text-sm font-bold text-gray-500 tracking-widest mb-4">VISIT DETAILS</Text>
       <SelectField label="Visitor Type" value={form.visitorType} options={['Contractor', 'Client', 'Interviewee', 'Vendor', 'Personal']} onSelect={(v: string) => setForm({...form, visitorType: v})} />
       <SelectField label="Purpose of Visit *" value={form.purpose} options={['Meeting', 'Delivery', 'Interview', 'Maintenance', 'Other']} onSelect={(v: string) => setForm({...form, purpose: v})} />
-      <SelectField label="Person to Meet *" value={form.personToMeet} options={hostNames} onSelect={(v: string) => {
-        const host = hosts.find((item) => item.name === v);
-        setForm({...form, personToMeet: v, department: host?.department || ''});
+      <HostSelectField label="Person to Meet *" value={form.personToMeet} displayValue={selectedHost?.name} options={hosts} onSelect={(host: HostOption) => {
+        setForm({...form, personToMeet: host.id, department: host.department || ''});
       }} />
       <SelectField label="Department" value={form.department} options={[...new Set(hosts.map((host) => host.department).filter(Boolean))]} onSelect={(v: string) => setForm({...form, department: v})} />
       <InputField 
@@ -209,7 +269,7 @@ export default function NewRegistrationScreen() {
         {isSubmitting ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text className="text-white font-bold text-lg tracking-wider">REGISTER VISITOR</Text>
+          <Text className="text-white font-bold text-lg tracking-wider">+ New Appointment</Text>
         )}
       </TouchableOpacity>
 

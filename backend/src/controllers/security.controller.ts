@@ -143,6 +143,31 @@ export const scanQrCode = async (req: Request, res: Response): Promise<void> => 
       allowCheckOut: visit.status === VisitStatus.CHECKED_IN || (!!visit.checkInAt && !visit.checkOutAt),
     };
 
+    // Notify both Employee (Host) and Admin simultaneously when Security scans QR Code
+    try {
+      if (visit.hostId) {
+        await NotificationService.sendNotification({
+          recipientId: visit.hostId,
+          type: 'VISITOR_SCANNED',
+          title: 'Visitor Arrived at Security Gate',
+          message: `${details.visitorName} has arrived and QR code was scanned by Security.`,
+          visitId: visit.id,
+          targetScreen: 'Approvals',
+          data: { appointmentId: details.displayId, visitorName: details.visitorName }
+        });
+      }
+      await NotificationService.sendRoleNotification(RoleEnum.SUPER_ADMIN, {
+        type: 'VISITOR_SCANNED',
+        title: 'Visitor Arrived at Security Gate',
+        message: `${details.visitorName} has arrived and QR code was scanned by Security.`,
+        visitId: visit.id,
+        targetScreen: 'Approvals',
+        data: { appointmentId: details.displayId, visitorName: details.visitorName }
+      });
+    } catch (notifErr) {
+      console.error('Scan notification broadcast error:', notifErr);
+    }
+
     res.json({
       message: visit.status === VisitStatus.APPROVED ? 'ALLOW ENTRY' : `STATUS: ${visit.status}`,
       visit,

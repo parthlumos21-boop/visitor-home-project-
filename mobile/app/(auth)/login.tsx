@@ -1,63 +1,22 @@
 /// <reference types="nativewind/types" />
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Alert, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Alert, ScrollView, Image, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import { Link } from 'expo-router';
-import { InputField } from '../../components/InputField';
-import { CustomButton } from '../../components/CustomButton';
+import { User, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
-import { LoginPreview, loginUser, previewLoginUser } from '../../services/auth';
+import { loginUser } from '../../services/auth';
 import { logMobileActivity } from '../../services/activityLogger';
-
-const ADMIN_EMAIL = 'keval@swatiswitchgears.com';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const [loginPreview, setLoginPreview] = useState<LoginPreview | null>(null);
   const { setAuth } = useAuthStore();
   
   const normalizedEmail = email.trim().toLowerCase();
-  const isAdminEmail = normalizedEmail === ADMIN_EMAIL;
-  const isAdminEmailTyping = normalizedEmail.length > 0 && ADMIN_EMAIL.startsWith(normalizedEmail);
-  const showAdminPreview = isAdminEmail || isAdminEmailTyping;
-  const heading = useMemo(() => {
-    if (showAdminPreview) return 'Admin';
-    if (loginPreview?.exists && loginPreview.role === 'EMPLOYEE') return 'Employee login';
-    if (loginPreview?.exists && loginPreview.role) {
-      const formattedRole = loginPreview.role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-      return `${formattedRole} login`;
-    }
-    if (loginPreview?.exists && loginPreview.name) return loginPreview.name;
-    return 'Visitor Gate';
-  }, [loginPreview, showAdminPreview]);
-  const subheading = useMemo(() => {
-    if (showAdminPreview) return 'Sign in as super admin';
-    if (loginPreview?.exists && loginPreview.name) return loginPreview.name;
-    return 'Sign in to your account';
-  }, [loginPreview, showAdminPreview]);
-
-  useEffect(() => {
-    setLoginPreview(null);
-    if (!normalizedEmail || !normalizedEmail.includes('@')) return;
-
-    let isActive = true;
-    const timeout = setTimeout(async () => {
-      try {
-        const preview = await previewLoginUser(normalizedEmail);
-        if (isActive) setLoginPreview(preview);
-      } catch (error) {
-        if (isActive) setLoginPreview(null);
-      }
-    }, 350);
-
-    return () => {
-      isActive = false;
-      clearTimeout(timeout);
-    };
-  }, [normalizedEmail]);
 
   const handleLogin = async () => {
     setLoginError('');
@@ -136,59 +95,131 @@ export default function LoginScreen() {
 
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 40, justifyContent: 'center', flexGrow: 1 }}>
-      <View className="mb-8 mt-10">
-        <Text className="text-3xl font-bold text-gray-900 mb-2">
-          {heading}
-        </Text>
-        <Text className="text-gray-500 text-lg">
-          {subheading}
-        </Text>
-        {showAdminPreview ? (
-          <Text className="mt-2 text-sm font-semibold text-blue-700">{ADMIN_EMAIL}</Text>
-        ) : null}
-      </View>
-      
-      <InputField
-        label="Email"
-        placeholder="Enter your email"
-        value={email}
-        onChangeText={(text: string) => {
-          setEmail(text);
-          setLoginError('');
+    <ScrollView
+      style={{ flex: 1, backgroundColor: '#f1f5f9' }}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 40 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* ── WHITE CARD with blue accent ── */}
+      <View
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: 20,
+          borderWidth: 1,
+          borderColor: '#e2e8f0',
+          padding: 28,
+          shadowColor: '#2563eb',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 20,
+          elevation: 6,
         }}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      
-      <InputField
-        label="Password"
-        placeholder="Enter your password"
-        value={password}
-        onChangeText={(text: string) => {
-          setPassword(text);
-          setLoginError('');
-        }}
-        secureTextEntry
-      />
-
-      {loginError ? (
-        <View className="mt-2 rounded-lg border border-red-200 bg-red-50 p-3">
-          <Text className="text-sm font-semibold text-red-700">{loginError}</Text>
+      >
+        {/* ── Logo + Visitor Management — parallel, same level, centered ── */}
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24, paddingBottom: 20, borderBottomWidth: 2, borderBottomColor: '#2563eb' }}
+        >
+          <Image
+            source={require('../../assets/logo.png')}
+            style={{ width: 72, height: 72 }}
+            resizeMode="contain"
+          />
+          <View style={{ marginLeft: 14 }}>
+            <Text style={{ fontSize: 22, fontWeight: '900', color: '#1e293b', letterSpacing: 0.2, lineHeight: 27 }}>
+              Visitor
+            </Text>
+            <Text style={{ fontSize: 22, fontWeight: '900', color: '#2563eb', letterSpacing: 0.2, lineHeight: 27 }}>
+              Management
+            </Text>
+          </View>
         </View>
-      ) : null}
-      
-      <CustomButton
-        title="Sign In"
-        onPress={handleLogin}
-        isLoading={isLoading}
-        className="mt-6"
-      />
 
-      <View className="mt-8 flex-row justify-center items-center">
-        <Text className="text-gray-500">Don't have an account? </Text>
-        <Link href="/(auth)/register" className="text-blue-600 font-bold">Sign Up</Link>
+        {/* ── Username / Email ── */}
+        <View style={{ marginBottom: 14 }}>
+          <Text style={{ color: '#374151', fontWeight: '600', fontSize: 12, marginBottom: 7, letterSpacing: 0.1 }}>
+            Username / Email
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 999, paddingHorizontal: 13, paddingVertical: 9, minHeight: 42 }}>
+            <User color="#2563eb" size={16} />
+            <TextInput
+              style={{ flex: 1, minWidth: 0, marginLeft: 9, fontSize: 13, color: '#111827', paddingVertical: 0 }}
+              placeholder="Enter username or email"
+              placeholderTextColor="#9ca3af"
+              value={email}
+              onChangeText={(text) => { setEmail(text); setLoginError(''); }}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
+        </View>
+
+        {/* ── Password ── */}
+        <View style={{ marginBottom: 22 }}>
+          <Text style={{ color: '#374151', fontWeight: '600', fontSize: 12, marginBottom: 7, letterSpacing: 0.1 }}>
+            Password
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 999, paddingHorizontal: 13, paddingVertical: 9, minHeight: 42 }}>
+            <Lock color="#2563eb" size={16} />
+            <TextInput
+              style={{ flex: 1, minWidth: 0, marginLeft: 9, fontSize: 13, color: '#111827', paddingVertical: 0 }}
+              placeholder="Enter password"
+              placeholderTextColor="#9ca3af"
+              value={password}
+              onChangeText={(text) => { setPassword(text); setLoginError(''); }}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              {showPassword
+                ? <EyeOff color="#6b7280" size={16} />
+                : <Eye color="#6b7280" size={16} />
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* ── Error ── */}
+        {loginError ? (
+          <View style={{ marginBottom: 14, borderRadius: 12, borderWidth: 1, borderColor: '#fecaca', backgroundColor: '#fff5f5', padding: 12 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#dc2626' }}>{loginError}</Text>
+          </View>
+        ) : null}
+
+        {/* ── LOGIN Button ── */}
+        <TouchableOpacity
+          onPress={handleLogin}
+          disabled={isLoading}
+          activeOpacity={0.85}
+          style={{
+            backgroundColor: '#2563eb',
+            borderRadius: 14,
+            paddingVertical: 13,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: isLoading ? 0.75 : 1,
+            shadowColor: '#2563eb',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.35,
+            shadowRadius: 10,
+            elevation: 6,
+          }}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 12, letterSpacing: 0.8 }}>SIGN IN</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* ── Sign Up ── */}
+        <View style={{ marginTop: 18, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: '#6b7280', fontSize: 13 }}>Don't have an account? </Text>
+          <Link href="/(auth)/register" style={{ color: '#2563eb', fontWeight: '700', fontSize: 13 }}>Sign Up</Link>
+        </View>
       </View>
+
     </ScrollView>
   );
 }

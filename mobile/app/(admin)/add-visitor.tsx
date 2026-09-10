@@ -172,14 +172,14 @@ export default function AddVisitorScreen() {
 
   const saveVisitor = async () => {
     if (!form.fullName.trim() || !form.mobile.trim() || !form.visitorType.trim() || !form.purpose.trim() || !form.personToMeet.trim() || !form.arrivalTime.trim() || !form.validFor.trim()) {
-      Alert.alert('Missing Details', 'Please fill all required visitor and visit details.');
+      Alert.alert('Missing Details', 'Please fill all required appointment details.');
       return;
     }
 
     setSaving(true);
     try {
       const notes = [`Valid For: ${form.validFor}`, form.notes.trim()].filter(Boolean).join('\n');
-      await createNewAppointment({
+      const appointment = await createNewAppointment({
         fullName: form.fullName,
         mobile: form.mobile,
         email: form.email,
@@ -192,15 +192,20 @@ export default function AddVisitorScreen() {
         notes,
       });
       logMobileActivity({
-        event: 'admin_new_visitor_created',
-        screen: 'Admin Add Visitor',
-        action: 'Add Visitor',
-        message: 'Admin added new visitor',
+        event: 'admin_new_appointment_created',
+        screen: 'Admin New Appointment',
+        action: 'New Appointment',
+        message: 'Admin created new appointment',
         metadata: { fullName: form.fullName, mobile: form.mobile, personToMeet: form.personToMeet },
       });
-      router.replace('/(admin)/visitors');
+      Alert.alert('Success', 'Appointment created successfully!', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/(admin)/dashboard'),
+        },
+      ]);
     } catch (error) {
-      Alert.alert('Server Error', getApiErrorMessage(error, 'Unable to add new visitor.'));
+      Alert.alert('Server Error', getApiErrorMessage(error, 'Unable to create new appointment.'));
     } finally {
       setSaving(false);
     }
@@ -209,10 +214,10 @@ export default function AddVisitorScreen() {
   return (
     <View className="flex-1 bg-gray-50">
       <View className="flex-row items-center border-b border-gray-200 bg-white px-4 pb-4 pt-14">
-        <TouchableOpacity className="mr-2 h-11 w-11 items-center justify-center" onPress={() => router.back()}>
+        <TouchableOpacity className="mr-2 h-11 w-11 items-center justify-center" onPress={() => router.replace('/(admin)/dashboard')}>
           <ArrowLeft color="#111827" size={23} />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-gray-950">Add New Visitor</Text>
+        <Text className="text-xl font-bold text-gray-950">New Appointment</Text>
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 34 }}>
@@ -265,7 +270,7 @@ export default function AddVisitorScreen() {
           className={`mt-3 h-12 flex-row items-center justify-center rounded-md bg-blue-600 ${saving ? 'opacity-70' : ''}`}
           activeOpacity={0.78}
         >
-          {saving ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-bold text-white">+ Add Visitor</Text>}
+          {saving ? <ActivityIndicator color="#ffffff" /> : <Text className="text-base font-bold text-white">+ New Appointment</Text>}
         </TouchableOpacity>
       </ScrollView>
     </View>
