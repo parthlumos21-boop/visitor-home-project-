@@ -5,6 +5,8 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } fr
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar as CalendarIcon, Clock, Handshake, Building2, User as UserIcon, Phone, Download, Share2 } from 'lucide-react-native';
 import { getSecurityVisits } from '../../../services/security';
+import api from '../../../services/api';
+import { useAuthStore } from '../../../store/authStore';
 import QRCode from 'react-native-qrcode-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,6 +16,8 @@ export default function AdminVisitDetails() {
   const insets = useSafeAreaInsets();
   const [visit, setVisit] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [renewing, setRenewing] = useState(false);
+  const { user } = useAuthStore();
   const viewRef = useRef<any>(null);
 
   const fetchVisitDetails = async () => {
@@ -72,6 +76,23 @@ export default function AdminVisitDetails() {
     }
   };
 
+  const handleRenew = async () => {
+    try {
+      setRenewing(true);
+      await api.put(`/new-appointments/${id}/renew`, {
+        approverId: user?.id,
+        approverName: user?.name
+      });
+      Alert.alert('Success', 'Appointment has been renewed for today!', [
+        { text: 'OK', onPress: () => fetchVisitDetails() }
+      ]);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to renew appointment');
+    } finally {
+      setRenewing(false);
+    }
+  };
+
   if (loading) {
     return (
       <View className="flex-1 bg-gray-50 items-center justify-center">
@@ -112,9 +133,17 @@ export default function AdminVisitDetails() {
       </View>
 
       <ScrollView className="flex-1 p-4">
-        <View className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 mb-4 flex-row items-center justify-between">
-          <Text className="text-gray-900 font-bold">Appointment Confirmed</Text>
-          <Text className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 font-bold uppercase">{visit.status}</Text>
+        <View className={`rounded-2xl p-4 mb-4 flex-row items-center justify-between border ${
+          visit.status === 'EXPIRED' ? 'bg-red-50 border-red-100' :
+          visit.status === 'RENEWED' ? 'bg-blue-50 border-blue-100' :
+          'bg-emerald-50 border-emerald-100'
+        }`}>
+          <Text className="text-gray-900 font-bold">Appointment Status</Text>
+          <Text className={`rounded-full px-3 py-1 font-bold uppercase ${
+            visit.status === 'EXPIRED' ? 'bg-red-100 text-red-700' :
+            visit.status === 'RENEWED' ? 'bg-blue-100 text-blue-700' :
+            'bg-emerald-100 text-emerald-700'
+          }`}>{visit.status}</Text>
         </View>
 
         <ViewShot ref={viewRef} options={{ format: 'png', quality: 0.9 }} style={{ marginBottom: 16, backgroundColor: '#f9fafb' }}>
@@ -189,7 +218,7 @@ export default function AdminVisitDetails() {
           </View>
         </View>
 
-        <View className="mt-2 mb-6 flex-row">
+        <View className="mb-6 flex-row">
           <TouchableOpacity onPress={handleDownloadPass} className="h-11 flex-1 flex-row items-center justify-center rounded-lg border border-blue-600 bg-white px-3 mr-4">
             <Download color="#2563eb" size={18} />
             <Text className="ml-2 font-bold text-blue-700">Download QR</Text>
@@ -199,6 +228,17 @@ export default function AdminVisitDetails() {
             <Text className="ml-2 font-bold text-blue-700">Share QR</Text>
           </TouchableOpacity>
         </View>
+
+        {visit.status === 'EXPIRED' && (
+          <TouchableOpacity
+            onPress={handleRenew}
+            disabled={renewing}
+            className={`bg-blue-600 rounded-xl py-2.5 items-center mb-6 shadow-md flex-row justify-center ${renewing ? 'opacity-70' : ''}`}
+          >
+            {renewing && <ActivityIndicator color="#ffffff" size="small" className="mr-2" />}
+            <Text className="text-white font-bold text-base">{renewing ? 'Renewing...' : 'Renew Appointment'}</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           onPress={() => router.back()}

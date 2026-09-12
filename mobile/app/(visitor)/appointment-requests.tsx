@@ -16,7 +16,17 @@ export default function AppointmentRequests() {
   const fetchVisits = async () => {
     try {
       const data = await getMyVisitorVisits('requests');
-      setVisits(data || []);
+      const seen = new Set();
+      const deduplicated = (data || []).filter((inv: any) => {
+        const dateStr = new Date(inv.scheduledAt || Date.now()).toISOString().split('T')[0];
+        const vName = (inv.visitor?.name || '').toLowerCase().trim();
+        const hName = (inv.host?.name || '').toLowerCase().trim();
+        const key = `${vName}-${hName}-${dateStr}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setVisits(deduplicated);
     } catch (err) {
       console.error("Error fetching visits:", err);
     } finally {

@@ -31,8 +31,19 @@ const parseVisitDateTime = (visitDate: string, arrivalTime?: string) => {
 };
 
 const generateVisitDisplayId = async () => {
-  const count = await prisma.visit.count();
-  return `VIS-${String(count + 1).padStart(6, '0')}`;
+  const lastVisit = await prisma.visit.findFirst({
+    where: { displayId: { not: null } },
+    orderBy: { createdAt: 'desc' }
+  });
+  let newNumber = 1;
+  if (lastVisit?.displayId && lastVisit.displayId.startsWith('VIS-')) {
+    const numPart = parseInt(lastVisit.displayId.replace('VIS-', ''), 10);
+    if (!isNaN(numPart)) newNumber = numPart + 1;
+  } else {
+    const count = await prisma.visit.count();
+    newNumber = count + 1;
+  }
+  return `VIS-${String(newNumber).padStart(6, '0')}`;
 };
 
 const endOfVisitDay = (date: Date) => {
@@ -63,8 +74,18 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
       return;
     }
 
-    const count = await prisma.newAppointment.count();
-    const appointmentId = `APT-${String(count + 1).padStart(6, '0')}`;
+    const lastAppointment = await prisma.newAppointment.findFirst({
+      orderBy: { createdAt: 'desc' }
+    });
+    let newAppNumber = 1;
+    if (lastAppointment?.appointmentId && lastAppointment.appointmentId.startsWith('APT-')) {
+      const numPart = parseInt(lastAppointment.appointmentId.replace('APT-', ''), 10);
+      if (!isNaN(numPart)) newAppNumber = numPart + 1;
+    } else {
+      const count = await prisma.newAppointment.count();
+      newAppNumber = count + 1;
+    }
+    const appointmentId = `APT-${String(newAppNumber).padStart(6, '0')}`;
     const visitorPhone = mobile.trim();
     const visitorEmail = email?.trim() || null;
     const visitorName = fullName.trim();
@@ -133,6 +154,21 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
       },
     });
 
+    // Check for duplicate active appointment
+    const duplicateAppointment = await prisma.newAppointment.findFirst({
+      where: {
+        mobile: visitorPhone,
+        personToMeet: host.name,
+        visitDate: visitDate.trim(),
+        status: { notIn: ['REJECTED', 'CANCELLED', 'EXPIRED', 'COMPLETED'] },
+      },
+    });
+
+    if (duplicateAppointment) {
+      res.status(400).json({ error: 'An active appointment already exists for this visitor and host on this date.' });
+      return;
+    }
+
     const visitor = existingVisitor
       ? await prisma.visitorProfile.update({
           where: { id: existingVisitor.id },
@@ -143,6 +179,11 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
         });
 
     const displayId = await generateVisitDisplayId();
+
+    const currentUser = (req as any).user;
+    const isInternalCreator = currentUser && (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'EMPLOYEE');
+    const initialAppointmentStatus = isInternalCreator ? 'APPROVED' : 'REGISTERED';
+    const initialVisitStatus = isInternalCreator ? VisitStatus.APPROVED : VisitStatus.PENDING;
 
     const appointment = await prisma.newAppointment.create({
       data: {
@@ -160,10 +201,10 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
         arrivalTime: arrivalTime?.trim() || null,
         vehicleNumber: vehicleNumber?.trim() || null,
         notes: notes?.trim() || null,
-        status: 'APPROVED',
-        decidedAt: new Date(),
-        decidedBy: creator?.id || null,
-        decidedByName: creator?.name || 'Keval V Shah',
+        status: initialAppointmentStatus,
+        decidedAt: isInternalCreator ? new Date() : null,
+        decidedBy: isInternalCreator ? (creator?.id || null) : null,
+        decidedByName: isInternalCreator ? (creator?.name || null) : null,
       },
     });
 
@@ -175,7 +216,7 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
         createdBy: creator?.id || null,
         purpose: purpose.trim(),
         scheduledAt,
-        status: VisitStatus.APPROVED,
+        status: initialVisitStatus,
       },
       include: {
         visitor: true,
@@ -235,13 +276,71 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
 
     res.status(201).json({ ...appointment, visit });
   } catch (error) {
-    console.error('Create new appointment error:', error);
-    res.status(500).json({ error: 'Failed to create new appointment' });
+    console.error('[Appointment Controller Error]:', error);
+    res.status(500).json({ error: 'Failed to create new appointment', details: String(error) });
+  }
+};
+
+const autoExpireAppointments = async () => {
+  try {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Find appointments that aren't already expired/completed/rejected
+    const activeAppointments = await prisma.newAppointment.findMany({
+      where: {
+        status: { in: ['REGISTERED', 'APPROVED', 'PENDING'] }
+      },
+      select: { id: true, mobile: true, email: true, visitDate: true }
+    });
+
+    const oldAppointments = activeAppointments.filter(app => {
+      // Parse DD-MM-YYYY
+      const parts = app.visitDate.trim().split('-');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        const year = parseInt(parts[2], 10);
+        const visitDateObj = new Date(year, month - 1, day);
+        return visitDateObj < startOfToday;
+      }
+      return false; // Skip invalid formats
+    });
+
+    if (oldAppointments.length > 0) {
+      await prisma.newAppointment.updateMany({
+        where: { id: { in: oldAppointments.map(a => a.id) } },
+        data: { status: 'EXPIRED' }
+      });
+
+      // Also expire corresponding visits
+      const mobiles = oldAppointments.map(a => a.mobile);
+      if (mobiles.length > 0) {
+        const profiles = await prisma.visitorProfile.findMany({
+          where: { phone: { in: mobiles } },
+          select: { id: true }
+        });
+        if (profiles.length > 0) {
+          await prisma.visit.updateMany({
+            where: {
+              visitorId: { in: profiles.map(p => p.id) },
+              status: { in: [VisitStatus.PENDING, VisitStatus.APPROVED] },
+              scheduledAt: { lt: startOfToday }
+            },
+            data: { status: VisitStatus.EXPIRED }
+          });
+        }
+      }
+      console.log(`[Auto Expire] Marked ${oldAppointments.length} appointments as EXPIRED.`);
+    }
+  } catch (err) {
+    console.error('Auto expire error:', err);
   }
 };
 
 export const getNewAppointments = async (req: Request, res: Response): Promise<void> => {
   try {
+    await autoExpireAppointments();
     const showAll = req.query.all === 'true';
     const personToMeet = req.query.personToMeet as string | undefined;
 
@@ -430,3 +529,150 @@ export const rejectNewAppointment = async (req: Request, res: Response): Promise
     res.status(500).json({ error: 'Failed to reject appointment' });
   }
 };
+
+export const renewAppointment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+    const { approverId, approverName } = req.body || {};
+    const finalApproverName = approverName || (req as any).user?.name || 'Keval V Shah';
+
+    const now = new Date();
+    const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const hours = now.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const currentHours = hours % 12 || 12;
+    const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+    const todayTime = `${currentHours}:${currentMinutes} ${ampm}`;
+
+    let appointment = await prisma.newAppointment.findUnique({ where: { id } });
+    let visitRecord = null;
+    if (!appointment) {
+      visitRecord = await prisma.visit.findUnique({ where: { id }, include: { visitor: true, host: true } });
+      if (!visitRecord) {
+        res.status(404).json({ error: 'Appointment or Visit not found' });
+        return;
+      }
+      appointment = await prisma.newAppointment.findFirst({
+        where: {
+          mobile: visitRecord.visitor.phone,
+          personToMeet: visitRecord.host.name,
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      if (!appointment) {
+        res.status(404).json({ error: 'Original appointment not found' });
+        return;
+      }
+    }
+
+    appointment = await prisma.newAppointment.update({
+      where: { id: appointment.id },
+      data: {
+        status: 'RENEWED',
+        visitDate: todayDate,
+        arrivalTime: todayTime,
+        rejectionReason: null,
+        decidedAt: now,
+        decidedBy: approverId || (req as any).user?.id || null,
+        decidedByName: finalApproverName,
+      },
+    });
+
+    const visitorProfile = await prisma.visitorProfile.findFirst({
+      where: {
+        OR: [
+          { phone: appointment.mobile },
+          ...(appointment.email ? [{ email: appointment.email }] : []),
+        ],
+      },
+      select: { id: true },
+    });
+    const host = await prisma.user.findFirst({
+      where: {
+        role: 'EMPLOYEE',
+        OR: [{ name: appointment.personToMeet }, { id: appointment.personToMeet }, { email: appointment.personToMeet.toLowerCase() }],
+      },
+      select: { id: true, role: true },
+    });
+
+    if (visitorProfile && host) {
+      await prisma.visit.updateMany({
+        where: {
+          visitorId: visitorProfile.id,
+          hostId: host.id,
+          status: { in: [VisitStatus.EXPIRED, VisitStatus.PENDING, VisitStatus.REJECTED] },
+        },
+        data: { 
+          status: VisitStatus.RENEWED,
+          scheduledAt: parseVisitDateTime(todayDate, todayTime) || now
+        },
+      });
+    }
+
+    // Notify the Visitor
+    const visitorUser = await prisma.user.findFirst({
+      where: {
+        role: 'VISITOR',
+        OR: [
+          { phone: appointment.mobile },
+          ...(appointment.email ? [{ email: appointment.email }] : []),
+        ],
+      },
+      select: { id: true, role: true },
+    });
+
+    if (visitorUser) {
+      await NotificationService.sendNotification({
+        type: 'APPOINTMENT_RENEWED',
+        title: 'Pass Renewed',
+        message: `Your visit pass has been renewed for today by ${finalApproverName}.`,
+        visitorId: appointment.appointmentId,
+        visitId: appointment.id,
+        recipientId: visitorUser.id,
+        recipientRole: visitorUser.role,
+        targetScreen: 'TotalVisits',
+      });
+    }
+
+    // Notify the Employee (Host)
+    if (host) {
+      await NotificationService.sendNotification({
+        type: 'APPOINTMENT_RENEWED',
+        title: 'Appointment Renewed',
+        message: `${appointment.fullName}'s appointment has been renewed for today by ${finalApproverName}.`,
+        visitorId: appointment.appointmentId,
+        recipientId: host.id,
+        recipientRole: host.role,
+      });
+    }
+
+    // Notify Admins
+    const adminUsers = await prisma.user.findMany({
+      where: { role: 'SUPER_ADMIN', status: 'ACTIVE' },
+      select: { id: true }
+    });
+    for (const adminUser of adminUsers) {
+      await NotificationService.sendNotification({
+        type: 'APPOINTMENT_RENEWED_ADMIN',
+        title: 'Appointment Renewed',
+        message: `${appointment.fullName}'s appointment was renewed by ${finalApproverName}.`,
+        recipientId: adminUser.id,
+        channelId: 'max',
+        priority: 'high'
+      });
+    }
+
+    console.log('[New Appointment Renewed]', JSON.stringify({
+      appointmentId: appointment.appointmentId,
+      fullName: appointment.fullName,
+      personToMeet: appointment.personToMeet,
+      renewedAt: appointment.decidedAt,
+    }));
+
+    res.json(appointment);
+  } catch (error) {
+    console.error('Renew appointment error:', error);
+    res.status(500).json({ error: 'Failed to renew appointment' });
+  }
+};
+

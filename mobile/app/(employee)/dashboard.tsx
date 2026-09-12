@@ -45,7 +45,17 @@ export default function EmployeeDashboard() {
           const url = `/new-appointments?all=true&personToMeet=${encodeURIComponent(user.name)}`;
           const res = await api.get(url);
           if (Array.isArray(res.data)) {
-            approvalsCount = res.data.length;
+            const seen = new Set();
+            const deduplicated = res.data.filter((app: any) => {
+              const vName = (app.fullName || '').toLowerCase().trim();
+              const hName = (app.personToMeet || '').toLowerCase().trim();
+              const dateStr = app.visitDate || '';
+              const key = `${vName}-${hName}-${dateStr}`;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+            approvalsCount = deduplicated.length;
           }
         } catch (e) {}
       }

@@ -63,8 +63,18 @@ export default function SecurityVisitors() {
     try {
       const data = await getSecurityVisits(filter);
       if (mounted.current) {
-        setVisits(data || []);
-        setFilteredVisits(data || []);
+        const seen = new Set();
+        const deduplicated = (data || []).filter((visit: any) => {
+          const dateStr = new Date(visit.scheduledAt || Date.now()).toISOString().split('T')[0];
+          const vName = (visit.visitor?.name || '').toLowerCase().trim();
+          const hName = (visit.host?.name || '').toLowerCase().trim();
+          const key = `${vName}-${hName}-${dateStr}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setVisits(deduplicated);
+        setFilteredVisits(deduplicated);
       }
     } catch (error) {
       console.error('Failed to fetch security visits:', error);

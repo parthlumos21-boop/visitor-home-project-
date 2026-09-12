@@ -5,6 +5,8 @@ import { ArrowLeft, Calendar, Clock, User, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getEmployeeVisits } from '../../services/employee';
 import { StatusBadge } from '../../components/StatusBadge';
+import api from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 
 const titles: Record<string, string> = {
   my: 'My Visitors',
@@ -25,12 +27,44 @@ export default function EmployeeVisitors() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailsVisit, setDetailsVisit] = useState<any | null>(null);
+  const { user } = useAuthStore();
+  const [renewingId, setRenewingId] = useState<string | null>(null);
+
+  const handleRenew = async (visitId: string) => {
+    try {
+      setRenewingId(visitId);
+      await api.put(`/new-appointments/${visitId}/renew`, {
+        approverId: user?.id,
+        approverName: user?.name
+      });
+      alert('Success: Appointment renewed successfully. The visitor can now reuse this pass.');
+      await loadVisits();
+      if (detailsVisit?.id === visitId) {
+        setDetailsVisit(null);
+      }
+    } catch (err: any) {
+      alert('Error: ' + (err.response?.data?.error || 'Failed to renew appointment.'));
+    } finally {
+      setRenewingId(null);
+    }
+  };
 
   const loadVisits = useCallback(async () => {
     setError(null);
     try {
       const data = await getEmployeeVisits(filter);
-      setVisits(data || []);
+      const seen = new Set();
+      const deduplicated = (data || []).filter((visit: any) => {
+        if (!visit.scheduledAt) return true;
+        const dateStr = new Date(visit.scheduledAt || Date.now()).toISOString().split('T')[0];
+        const vName = (visit.visitor?.name || '').toLowerCase().trim();
+        const hName = (visit.host?.name || '').toLowerCase().trim();
+        const key = `${vName}-${hName}-${dateStr}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setVisits(deduplicated);
     } catch (err) {
       setError('Failed to load visits');
     } finally {
@@ -89,7 +123,12 @@ export default function EmployeeVisitors() {
             </View>
           ) : (
             visits.map((visit) => (
-              <View key={visit.id} className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <TouchableOpacity 
+                key={visit.id} 
+                className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                activeOpacity={0.7}
+                onPress={() => setDetailsVisit(visit)}
+              >
                 <View className="flex-row items-start justify-between">
                   <View className="flex-1 pr-3">
                     <Text className="text-lg font-bold text-gray-950">{visit.visitor?.name || 'Visitor'}</Text>
@@ -115,13 +154,25 @@ export default function EmployeeVisitors() {
                     <Text className="ml-2 text-gray-700">{visit.purpose}</Text>
                   </View>
                 </View>
-                <TouchableOpacity
-                  onPress={() => setDetailsVisit(visit)}
-                  className="mt-4 h-10 items-center justify-center rounded-md border border-gray-200 bg-gray-50"
-                >
-                  <Text className="font-bold text-gray-800">View Details</Text>
-                </TouchableOpacity>
-              </View>
+                <View className="mt-4 h-10 items-center justify-center rounded-md border border-gray-200 bg-gray-50 flex-row">
+                  <Text className="font-bold text-blue-600 mr-2">View All Details</Text>
+                  <ArrowLeft color="#2563eb" size={16} style={{transform: [{rotate: '180deg'}]}} />
+                </View>
+
+                {visit.status === 'EXPIRED' && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleRenew(visit.id);
+                    }}
+                    disabled={renewingId === visit.id}
+                    className={`mt-3 h-10 items-center justify-center rounded-md border border-blue-600 bg-blue-50 flex-row ${renewingId === visit.id ? 'opacity-70' : ''}`}
+                  >
+                    {renewingId === visit.id && <ActivityIndicator color="#2563eb" size="small" className="mr-2" />}
+                    <Text className="font-bold text-blue-700">{renewingId === visit.id ? 'Renewing...' : 'Renew Appointment'}</Text>
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
             ))
           )}
         </ScrollView>
@@ -161,11 +212,22 @@ export default function EmployeeVisitors() {
                 </View>
               ))}
 
+              {detailsVisit?.status === 'EXPIRED' && (
+                <TouchableOpacity
+                  onPress={() => handleRenew(detailsVisit.id)}
+                  disabled={renewingId === detailsVisit.id}
+                  className={`mt-5 h-12 items-center justify-center rounded-md bg-blue-600 flex-row ${renewingId === detailsVisit.id ? 'opacity-70' : ''}`}
+                >
+                  {renewingId === detailsVisit.id && <ActivityIndicator color="#ffffff" size="small" className="mr-2" />}
+                  <Text className="font-bold text-white">{renewingId === detailsVisit.id ? 'Renewing...' : 'Renew Appointment'}</Text>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
                 onPress={() => setDetailsVisit(null)}
-                className="mt-5 h-12 items-center justify-center rounded-md bg-blue-600"
+                className={`mt-3 h-12 items-center justify-center rounded-md ${detailsVisit?.status === 'EXPIRED' ? 'bg-gray-200' : 'bg-blue-600'}`}
               >
-                <Text className="font-bold text-white">Done</Text>
+                <Text className={`font-bold ${detailsVisit?.status === 'EXPIRED' ? 'text-gray-800' : 'text-white'}`}>Done</Text>
               </TouchableOpacity>
             </ScrollView>
           </Pressable>

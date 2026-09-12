@@ -210,17 +210,23 @@ export default function AdminDashboard() {
                 onPress={card.onPress}
                 accessibilityRole="button"
                 accessibilityLabel={`View ${card.title}`}
-                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-                style={{ width: cardWidth, aspectRatio: 1, maxWidth: 220 }}
+                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm flex-col"
+                style={{ width: cardWidth, minHeight: 140, maxWidth: 220 }}
                 activeOpacity={0.78}
               >
                 <View className={`mb-3 h-11 w-11 items-center justify-center rounded-lg ${card.accent}`}>
                   {card.icon}
                 </View>
-                <Text className="min-h-[40px] text-sm font-semibold leading-5 text-gray-700">{card.title}</Text>
+                <Text className="text-sm font-semibold leading-5 text-gray-700 mb-2">{card.title}</Text>
                 <View className="flex-1 justify-end">
-                  <Text className="text-3xl font-bold text-gray-950">{String(card.value).padStart(2, '0')}</Text>
-                  <Text className="mt-2 text-sm font-semibold text-blue-700">View -&gt;</Text>
+                  <View className="flex-row items-end justify-between w-full">
+                    <Text className="text-3xl font-bold text-gray-950" style={{ lineHeight: 36 }}>
+                      {String(card.value).padStart(2, '0')}
+                    </Text>
+                    <Text className="text-sm font-semibold text-blue-700 mb-1">
+                      View -&gt;
+                    </Text>
+                  </View>
                 </View>
               </TouchableOpacity>
             ))}

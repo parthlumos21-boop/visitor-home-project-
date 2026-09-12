@@ -166,4 +166,6 @@ enum VisitStatus {
   CHECKED_IN
   COMPLETED
   REJECTED
+  EXPIRED
+  RENEWED
 }

@@ -185,7 +185,7 @@ export default function NewRegistrationScreen() {
         params: {
           ...form,
           appointmentId: appointment.appointmentId,
-          status: 'PENDING',
+          status: appointment.status || 'PENDING',
         },
       });
     } catch (error) {

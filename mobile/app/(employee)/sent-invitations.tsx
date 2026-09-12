@@ -22,7 +22,17 @@ export default function SentInvitations() {
     setError(null);
     try {
       const data = await getEmployeeVisits(filter);
-      setVisits(data || []);
+      const seen = new Set();
+      const deduplicated = (data || []).filter((inv: any) => {
+        const dateStr = new Date(inv.scheduledAt || Date.now()).toISOString().split('T')[0];
+        const vName = (inv.visitor?.name || '').toLowerCase().trim();
+        const hName = (inv.host?.name || '').toLowerCase().trim();
+        const key = `${vName}-${hName}-${dateStr}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setVisits(deduplicated);
     } catch (err) {
       setError('Failed to load invitations');
     } finally {

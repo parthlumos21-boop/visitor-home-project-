@@ -78,7 +78,17 @@ export default function ApprovalsScreen() {
         ? `/new-appointments?all=true&personToMeet=${encodeURIComponent(user.name)}` 
         : `/new-appointments?all=true`;
       const response = await api.get(url);
-      setAppointments(response.data);
+      const seen = new Set();
+      const deduplicated = (response.data || []).filter((app: NewAppointment) => {
+        const vName = (app.fullName || '').toLowerCase().trim();
+        const hName = (app.personToMeet || '').toLowerCase().trim();
+        const dateStr = app.visitDate || '';
+        const key = `${vName}-${hName}-${dateStr}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setAppointments(deduplicated);
       logMobileActivity({
         event: 'employee_approval_list_loaded',
         screen: 'Employee Approvals',
@@ -241,7 +251,12 @@ export default function ApprovalsScreen() {
             displayedAppointments.map((appointment) => {
               if (activeTab === 'APPROVED') {
                 return (
-                  <View key={appointment.id} className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                  <TouchableOpacity 
+                    key={appointment.id} 
+                    className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                    activeOpacity={0.7}
+                    onPress={() => setDetailsTarget(appointment)}
+                  >
                     <View className="mb-3 flex-row items-start justify-between border-b border-gray-100 pb-3">
                       <View className="flex-1 pr-3">
                         <Text className="text-lg font-bold text-emerald-700 uppercase">{appointment.fullName} APPROVED</Text>
@@ -267,22 +282,25 @@ export default function ApprovalsScreen() {
                     </View>
                     
                     <View className="flex-row justify-end">
-                      <TouchableOpacity
-                        onPress={() => setDetailsTarget(appointment)}
+                      <View
                         className="flex-row items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-4 py-2"
-                        activeOpacity={0.78}
                       >
-                        <Text className="font-bold text-gray-800">View Details</Text>
-                        <ChevronRight color="#374151" size={18} style={{ marginLeft: 4 }} />
-                      </TouchableOpacity>
+                        <Text className="font-bold text-blue-600 mr-2">View All Details</Text>
+                        <ChevronRight color="#2563eb" size={18} />
+                      </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               }
 
               // PENDING view rendering
               return (
-                <View key={appointment.id} className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <TouchableOpacity 
+                  key={appointment.id} 
+                  className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                  activeOpacity={0.7}
+                  onPress={() => setDetailsTarget(appointment)}
+                >
                   <View className="flex-row items-start">
                     <View className="mr-3 h-11 w-11 items-center justify-center rounded-lg bg-blue-50">
                       <User color="#2563eb" size={22} />
@@ -308,14 +326,14 @@ export default function ApprovalsScreen() {
 
                   <View className="mt-5 flex-row">
                     <TouchableOpacity
-                      onPress={() => setRejectTarget(appointment)}
+                      onPress={(e) => { e.stopPropagation(); setRejectTarget(appointment); }}
                       className="mr-3 h-12 flex-1 items-center justify-center rounded-md border border-red-200 bg-red-50"
                       activeOpacity={0.78}
                     >
                       <Text className="font-bold text-red-700">Reject</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      onPress={() => confirmApprove(appointment)}
+                      onPress={(e) => { e.stopPropagation(); confirmApprove(appointment); }}
                       className="h-12 flex-1 flex-row items-center justify-center rounded-md bg-emerald-600"
                       activeOpacity={0.78}
                     >
@@ -324,15 +342,11 @@ export default function ApprovalsScreen() {
                     </TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity
-                    onPress={() => setDetailsTarget(appointment)}
-                    className="mt-3 h-11 flex-row items-center justify-center rounded-md border border-gray-200 bg-gray-50"
-                    activeOpacity={0.78}
-                  >
-                    <Eye color="#374151" size={18} />
-                    <Text className="ml-2 font-bold text-gray-800">View Details</Text>
-                  </TouchableOpacity>
-                </View>
+                  <View className="mt-3 h-11 flex-row items-center justify-center rounded-md border border-gray-200 bg-gray-50">
+                    <Text className="font-bold text-blue-600 mr-2">View All Details</Text>
+                    <ChevronRight color="#2563eb" size={18} />
+                  </View>
+                </TouchableOpacity>
               );
             })
           )}

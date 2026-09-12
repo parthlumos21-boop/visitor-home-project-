@@ -103,6 +103,9 @@ export default function LoginScreen() {
       {/* ── WHITE CARD with blue accent ── */}
       <View
         style={{
+          width: '100%',
+          maxWidth: 440,
+          alignSelf: 'center',
           backgroundColor: '#ffffff',
           borderRadius: 20,
           borderWidth: 1,
