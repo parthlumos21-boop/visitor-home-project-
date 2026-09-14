@@ -205,11 +205,172 @@ export const updateVisitStatus = async (req: Request, res: Response): Promise<vo
     const id = req.params.id as string;
     const { status, rejectionReason } = req.body;
     
+    // Check if the ID belongs to an Invitation
+    const invitation = await prisma.invitation.findUnique({ where: { id } });
+    if (invitation) {
+      const updatedInv = await prisma.invitation.update({
+        where: { id },
+        data: { 
+          status,
+          ...(rejectionReason && { notes: invitation.notes ? `${invitation.notes}\nRejection Reason: ${rejectionReason}` : `Rejection Reason: ${rejectionReason}` })
+        }
+      });
+      if (status === 'APPROVED') {
+        const creatorId = invitation.createdBy;
+        if (creatorId) {
+          await NotificationService.sendNotification({
+            recipientId: creatorId,
+            type: 'INVITATION_ACCEPTED',
+            title: 'Invitation Accepted',
+            message: `${invitation.fullName} has accepted your invitation.`,
+            targetScreen: 'TotalVisits',
+            channelId: 'max',
+            priority: 'high',
+          }).catch(console.error);
+        }
+        const visitorUser = await prisma.user.findFirst({
+          where: { 
+            role: 'VISITOR',
+            OR: [
+              { phone: invitation.mobile },
+              ...(invitation.email ? [{ email: invitation.email }] : [])
+            ]
+          }
+        });
+        if (visitorUser) {
+          await NotificationService.sendNotification({
+            recipientId: visitorUser.id,
+            type: 'INVITATION_ACCEPTED',
+            title: 'Invitation Accepted',
+            message: `You have successfully accepted the invitation.`,
+            targetScreen: 'Invitations',
+            channelId: 'max',
+            priority: 'high',
+          }).catch(console.error);
+        }
+      } else if (status === 'REJECTED') {
+        const creatorId = invitation.createdBy;
+        if (creatorId) {
+          await NotificationService.sendNotification({
+            recipientId: creatorId,
+            type: 'INVITATION_REJECTED',
+            title: 'Invitation Rejected',
+            message: `${invitation.fullName} has rejected your invitation.${rejectionReason ? `\nReason: ${rejectionReason}` : ''}`,
+            targetScreen: 'TotalVisits',
+            channelId: 'max',
+            priority: 'high',
+          }).catch(console.error);
+        }
+        const visitorUser = await prisma.user.findFirst({
+          where: { 
+            role: 'VISITOR',
+            OR: [
+              { phone: invitation.mobile },
+              ...(invitation.email ? [{ email: invitation.email }] : [])
+            ]
+          }
+        });
+        if (visitorUser) {
+          await NotificationService.sendNotification({
+            recipientId: visitorUser.id,
+            type: 'INVITATION_REJECTED',
+            title: 'Invitation Rejected',
+            message: `You have successfully rejected the invitation.`,
+            targetScreen: 'Invitations',
+            channelId: 'max',
+            priority: 'high',
+          }).catch(console.error);
+        }
+      }
+      res.status(200).json(updatedInv);
+      return;
+    }
+
+    // Check if the ID belongs to a NewAppointment
+    const appointment = await prisma.newAppointment.findUnique({ where: { id } });
+    if (appointment) {
+      const updatedApp = await prisma.newAppointment.update({
+        where: { id },
+        data: { 
+          status,
+          ...(rejectionReason && { notes: appointment.notes ? `${appointment.notes}\nRejection Reason: ${rejectionReason}` : `Rejection Reason: ${rejectionReason}` })
+        }
+      });
+      if (status === 'APPROVED') {
+        const creatorId = appointment.decidedBy;
+        if (creatorId) {
+          await NotificationService.sendNotification({
+            recipientId: creatorId,
+            type: 'INVITATION_ACCEPTED',
+            title: 'Appointment Accepted',
+            message: `${appointment.fullName} has accepted the appointment.`,
+            targetScreen: 'TotalVisits',
+            channelId: 'max',
+            priority: 'high',
+          }).catch(console.error);
+        }
+        const visitorUser = await prisma.user.findFirst({
+          where: { 
+            role: 'VISITOR',
+            OR: [
+              { phone: appointment.mobile },
+              ...(appointment.email ? [{ email: appointment.email }] : [])
+            ]
+          }
+        });
+        if (visitorUser) {
+          await NotificationService.sendNotification({
+            recipientId: visitorUser.id,
+            type: 'INVITATION_ACCEPTED',
+            title: 'Appointment Accepted',
+            message: `You have successfully accepted the appointment.`,
+            targetScreen: 'Invitations',
+            channelId: 'max',
+            priority: 'high',
+          }).catch(console.error);
+        }
+      } else if (status === 'REJECTED') {
+        const creatorId = appointment.decidedBy;
+        if (creatorId) {
+          await NotificationService.sendNotification({
+            recipientId: creatorId,
+            type: 'INVITATION_REJECTED',
+            title: 'Appointment Rejected',
+            message: `${appointment.fullName} has rejected the appointment.${rejectionReason ? `\nReason: ${rejectionReason}` : ''}`,
+            targetScreen: 'TotalVisits',
+            channelId: 'max',
+            priority: 'high',
+          }).catch(console.error);
+        }
+        const visitorUser = await prisma.user.findFirst({
+          where: { 
+            role: 'VISITOR',
+            OR: [
+              { phone: appointment.mobile },
+              ...(appointment.email ? [{ email: appointment.email }] : [])
+            ]
+          }
+        });
+        if (visitorUser) {
+          await NotificationService.sendNotification({
+            recipientId: visitorUser.id,
+            type: 'INVITATION_REJECTED',
+            title: 'Appointment Rejected',
+            message: `You have successfully rejected the appointment.`,
+            targetScreen: 'Invitations',
+            channelId: 'max',
+            priority: 'high',
+          }).catch(console.error);
+        }
+      }
+      res.status(200).json(updatedApp);
+      return;
+    }
+
     const visit = await prisma.visit.update({
       where: { id },
       data: { 
         status,
-
       },
       include: {
         host: true,
@@ -411,50 +572,95 @@ export const getVisitorInvitations = async (req: AuthenticatedRequest, res: Resp
       }
     });
 
-    if (!visitorProfile) {
-      res.json([]);
-      return;
-    }
-
-    const invitations = await prisma.visit.findMany({
+    // Fetch from Invitation table
+    const invitations = await prisma.invitation.findMany({
       where: {
-        visitorId: visitorProfile.id,
-        createdBy: { not: null },
-        status: 'PENDING'
+        OR: [
+          { mobile: user.phone || '' },
+          { email: user.email }
+        ],
+        status: { in: ['PENDING', 'APPROVED'] }
       },
-      include: {
-        host: {
-          select: { name: true }
-        },
-        visitor: {
-          select: { name: true }
-        }
-      },
-      orderBy: { scheduledAt: 'desc' }
     });
 
-    const creatorIds = invitations
-      .map((invitation) => invitation.createdBy)
-      .filter((id): id is string => Boolean(id));
-    const creators = creatorIds.length
-      ? await prisma.user.findMany({
-          where: { id: { in: creatorIds } },
-          select: { id: true, name: true },
-        })
-      : [];
-    const creatorNames = new Map(creators.map((creator) => [creator.id, creator.name]));
+    // Fetch from NewAppointment table
+    const newAppointments = await prisma.newAppointment.findMany({
+      where: {
+        OR: [
+          { mobile: user.phone || '' },
+          { email: user.email }
+        ],
+        status: { in: ['REGISTERED', 'PENDING', 'APPROVED'] }
+      },
+    });
 
-    res.json(
-      invitations.map((invitation) => ({
-        ...invitation,
-        createdByName: invitation.createdBy ? creatorNames.get(invitation.createdBy) || null : null,
-      }))
+    // Helper to parse dates
+    const parseDateTime = (visitDate?: string, arrivalTime?: string | null) => {
+      let scheduledAt = new Date();
+      try {
+        if (visitDate) {
+          const [day, month, year] = visitDate.split('-');
+          let hours = 12, minutes = 0;
+          if (arrivalTime) {
+            const timeMatch = arrivalTime.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+            if (timeMatch) {
+              hours = parseInt(timeMatch[1], 10);
+              minutes = parseInt(timeMatch[2], 10);
+              const ampm = timeMatch[3]?.toUpperCase();
+              if (ampm === 'PM' && hours < 12) hours += 12;
+              if (ampm === 'AM' && hours === 12) hours = 0;
+            }
+          }
+          scheduledAt = new Date(Number(year), Number(month) - 1, Number(day), hours, minutes);
+        }
+      } catch (e) {}
+      return scheduledAt;
+    };
+
+    // Map invitations
+    const mappedInvitations = invitations.map((inv) => ({
+      id: inv.id,
+      displayId: inv.invitationId,
+      visitorId: visitorProfile?.id || null,
+      hostId: inv.createdBy,
+      createdBy: inv.createdBy,
+      createdByName: inv.createdByName || null,
+      purpose: inv.purpose,
+      status: inv.status,
+      scheduledAt: parseDateTime(inv.visitDate, inv.arrivalTime),
+      createdAt: inv.createdAt,
+      host: { name: inv.personToMeet || 'Employee' },
+      visitor: { name: inv.fullName }
+    }));
+
+    // Map new appointments
+    const mappedAppointments = newAppointments.map((app) => ({
+      id: app.id,
+      displayId: app.appointmentId,
+      visitorId: visitorProfile?.id || null,
+      hostId: app.decidedBy,
+      createdBy: app.decidedBy,
+      createdByName: app.decidedByName || null,
+      purpose: app.purpose,
+      status: app.status,
+      scheduledAt: parseDateTime(app.visitDate, app.arrivalTime),
+      createdAt: app.createdAt,
+      host: { name: app.personToMeet || 'Employee' },
+      visitor: { name: app.fullName }
+    }));
+
+    // Combine and sort by createdAt descending
+    const combined = [...mappedInvitations, ...mappedAppointments].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+
+    res.json(combined);
   } catch (error) {
     console.error('getVisitorInvitations error:', error);
     res.status(500).json({ error: 'Failed to fetch invitations' });
   }
 };
+
 
 
 

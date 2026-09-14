@@ -25,17 +25,7 @@ export default function VisitorsScreen() {
     try {
       setLoading(true);
       const data = await getNewAppointments();
-      const seen = new Set();
-      const deduplicated = (data || []).filter((app: any) => {
-        const vName = (app.fullName || '').toLowerCase().trim();
-        const hName = (app.personToMeet || '').toLowerCase().trim();
-        const dateStr = app.visitDate || '';
-        const key = `${vName}-${hName}-${dateStr}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-      setVisitors(deduplicated);
+      setVisitors(data || []);
     } catch (error) {
       Alert.alert('Server Error', getApiErrorMessage(error, 'Unable to load visitors.'));
     } finally {

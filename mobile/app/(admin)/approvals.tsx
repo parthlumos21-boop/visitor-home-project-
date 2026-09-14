@@ -72,17 +72,7 @@ export default function ApprovalsScreen() {
     try {
       setLoading(true);
       const data = await getNewAppointments();
-      const seen = new Set();
-      const deduplicated = (data || []).filter((app: NewAppointment) => {
-        const vName = (app.fullName || '').toLowerCase().trim();
-        const hName = (app.personToMeet || '').toLowerCase().trim();
-        const dateStr = app.visitDate || '';
-        const key = `${vName}-${hName}-${dateStr}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-      setAppointments(deduplicated);
+      setAppointments(data || []);
       logMobileActivity({
         event: 'admin_approval_list_loaded',
         screen: 'Admin Approvals',

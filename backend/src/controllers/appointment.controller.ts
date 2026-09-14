@@ -74,18 +74,6 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
       return;
     }
 
-    const lastAppointment = await prisma.newAppointment.findFirst({
-      orderBy: { createdAt: 'desc' }
-    });
-    let newAppNumber = 1;
-    if (lastAppointment?.appointmentId && lastAppointment.appointmentId.startsWith('APT-')) {
-      const numPart = parseInt(lastAppointment.appointmentId.replace('APT-', ''), 10);
-      if (!isNaN(numPart)) newAppNumber = numPart + 1;
-    } else {
-      const count = await prisma.newAppointment.count();
-      newAppNumber = count + 1;
-    }
-    const appointmentId = `APT-${String(newAppNumber).padStart(6, '0')}`;
     const visitorPhone = mobile.trim();
     const visitorEmail = email?.trim() || null;
     const visitorName = fullName.trim();
@@ -154,7 +142,10 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
       },
     });
 
-    // Check for duplicate active appointment
+    const currentUser = (req as any).user;
+    const isInternalCreator = currentUser && (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'EMPLOYEE');
+
+    // Check for duplicate active appointment or invitation
     const duplicateAppointment = await prisma.newAppointment.findFirst({
       where: {
         mobile: visitorPhone,
@@ -163,9 +154,18 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
         status: { notIn: ['REJECTED', 'CANCELLED', 'EXPIRED', 'COMPLETED'] },
       },
     });
+    
+    const duplicateInvitation = isInternalCreator ? await prisma.invitation.findFirst({
+      where: {
+        mobile: visitorPhone,
+        personToMeet: host.name,
+        visitDate: visitDate.trim(),
+        status: { notIn: ['REJECTED', 'CANCELLED', 'EXPIRED', 'COMPLETED'] },
+      },
+    }) : null;
 
-    if (duplicateAppointment) {
-      res.status(400).json({ error: 'An active appointment already exists for this visitor and host on this date.' });
+    if (duplicateAppointment || duplicateInvitation) {
+      res.status(400).json({ error: 'An active appointment or invitation already exists for this visitor and host on this date.' });
       return;
     }
 
@@ -180,33 +180,78 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
 
     const displayId = await generateVisitDisplayId();
 
-    const currentUser = (req as any).user;
-    const isInternalCreator = currentUser && (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'EMPLOYEE');
-    const initialAppointmentStatus = isInternalCreator ? 'APPROVED' : 'REGISTERED';
     const initialVisitStatus = isInternalCreator ? VisitStatus.APPROVED : VisitStatus.PENDING;
 
-    const appointment = await prisma.newAppointment.create({
-      data: {
-        id: randomUUID(),
-        appointmentId,
-        fullName: visitorName,
-        mobile: visitorPhone,
-        email: visitorEmail,
-        company: company?.trim() || null,
-        visitorType: visitorType?.trim() || null,
-        purpose: purpose.trim(),
-        personToMeet: host.name,
-        department: department?.trim() || host.department || null,
-        visitDate: visitDate.trim(),
-        arrivalTime: arrivalTime?.trim() || null,
-        vehicleNumber: vehicleNumber?.trim() || null,
-        notes: notes?.trim() || null,
-        status: initialAppointmentStatus,
-        decidedAt: isInternalCreator ? new Date() : null,
-        decidedBy: isInternalCreator ? (creator?.id || null) : null,
-        decidedByName: isInternalCreator ? (creator?.name || null) : null,
-      },
-    });
+    let appointmentOrInvitation;
+    let createdType: 'APPOINTMENT' | 'INVITATION';
+
+    if (isInternalCreator) {
+      createdType = 'INVITATION';
+      const lastInvitation = await prisma.invitation.findFirst({ orderBy: { createdAt: 'desc' } });
+      let newInvNumber = 1;
+      if (lastInvitation?.invitationId && lastInvitation.invitationId.startsWith('INV-')) {
+        const numPart = parseInt(lastInvitation.invitationId.replace('INV-', ''), 10);
+        if (!isNaN(numPart)) newInvNumber = numPart + 1;
+      } else {
+        const count = await prisma.invitation.count();
+        newInvNumber = count + 1;
+      }
+      const invitationId = `INV-${String(newInvNumber).padStart(6, '0')}`;
+
+      appointmentOrInvitation = await prisma.invitation.create({
+        data: {
+          id: randomUUID(),
+          invitationId,
+          fullName: visitorName,
+          mobile: visitorPhone,
+          email: visitorEmail,
+          company: company?.trim() || null,
+          visitorType: visitorType?.trim() || null,
+          purpose: purpose.trim(),
+          personToMeet: host.name,
+          department: department?.trim() || host.department || null,
+          visitDate: visitDate.trim(),
+          arrivalTime: arrivalTime?.trim() || null,
+          vehicleNumber: vehicleNumber?.trim() || null,
+          notes: notes?.trim() || null,
+          status: 'APPROVED',
+          createdBy: creator!.id,
+          createdByName: creator!.name,
+        },
+      });
+    } else {
+      createdType = 'APPOINTMENT';
+      const lastAppointment = await prisma.newAppointment.findFirst({ orderBy: { createdAt: 'desc' } });
+      let newAppNumber = 1;
+      if (lastAppointment?.appointmentId && lastAppointment.appointmentId.startsWith('APT-')) {
+        const numPart = parseInt(lastAppointment.appointmentId.replace('APT-', ''), 10);
+        if (!isNaN(numPart)) newAppNumber = numPart + 1;
+      } else {
+        const count = await prisma.newAppointment.count();
+        newAppNumber = count + 1;
+      }
+      const appointmentId = `APT-${String(newAppNumber).padStart(6, '0')}`;
+
+      appointmentOrInvitation = await prisma.newAppointment.create({
+        data: {
+          id: randomUUID(),
+          appointmentId,
+          fullName: visitorName,
+          mobile: visitorPhone,
+          email: visitorEmail,
+          company: company?.trim() || null,
+          visitorType: visitorType?.trim() || null,
+          purpose: purpose.trim(),
+          personToMeet: host.name,
+          department: department?.trim() || host.department || null,
+          visitDate: visitDate.trim(),
+          arrivalTime: arrivalTime?.trim() || null,
+          vehicleNumber: vehicleNumber?.trim() || null,
+          notes: notes?.trim() || null,
+          status: 'REGISTERED',
+        },
+      });
+    }
 
     const visit = await prisma.visit.create({
       data: {
@@ -231,23 +276,28 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
       },
     });
 
-    console.log('[New Appointment]', JSON.stringify({
-      appointmentId: appointment.appointmentId,
-      fullName: appointment.fullName,
-      mobile: appointment.mobile,
-      purpose: appointment.purpose,
-      personToMeet: appointment.personToMeet,
-      createdAt: appointment.createdAt,
+    const notificationPayload = {
+      ...appointmentOrInvitation,
+      appointmentId: createdType === 'INVITATION' ? (appointmentOrInvitation as any).invitationId : (appointmentOrInvitation as any).appointmentId,
+    };
+
+    console.log(`[New ${createdType}]`, JSON.stringify({
+      id: notificationPayload.appointmentId,
+      fullName: appointmentOrInvitation.fullName,
+      mobile: appointmentOrInvitation.mobile,
+      purpose: appointmentOrInvitation.purpose,
+      personToMeet: appointmentOrInvitation.personToMeet,
+      createdAt: appointmentOrInvitation.createdAt,
     }));
 
     // Send notification strictly to Admin (Keval V Shah) via Dispatcher
-    await NotificationService.notifyAdminOfNewAppointment(appointment);
+    await NotificationService.notifyAdminOfNewAppointment(notificationPayload);
     
     // Also send push notification to the Employee (Host)
-    await NotificationService.notifyHostOfNewAppointment(appointment);
+    await NotificationService.notifyHostOfNewAppointment(notificationPayload);
 
     // Also send push notification to the Visitor if they are a registered user
-    await NotificationService.notifyVisitorOfNewAppointment(appointment);
+    await NotificationService.notifyVisitorOfNewAppointment(notificationPayload);
 
     const visitorUser = await prisma.user.findFirst({
       where: {
@@ -270,11 +320,11 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
         recipientId: visitorUser.id,
         recipientRole: visitorUser.role,
         targetScreen: 'TotalVisits',
-        data: { visitId: visit.id, appointmentId: appointment.id },
+        data: { visitId: visit.id, appointmentId: appointmentOrInvitation.id },
       });
     }
 
-    res.status(201).json({ ...appointment, visit });
+    res.status(201).json({ ...appointmentOrInvitation, visit });
   } catch (error) {
     console.error('[Appointment Controller Error]:', error);
     res.status(500).json({ error: 'Failed to create new appointment', details: String(error) });

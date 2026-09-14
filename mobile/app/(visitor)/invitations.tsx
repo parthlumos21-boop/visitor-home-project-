@@ -20,17 +20,10 @@ export default function VisitorInvitations() {
   const loadInvitations = async () => {
     try {
       const data = await getVisitorInvitations();
-      const seen = new Set();
-      const deduplicated = (data || []).filter((inv: any) => {
-        const dateStr = new Date(inv.scheduledAt || Date.now()).toISOString().split('T')[0];
-        const vName = (inv.visitor?.name || '').toLowerCase().trim();
-        const hName = (inv.host?.name || '').toLowerCase().trim();
-        const key = `${vName}-${hName}-${dateStr}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-      setInvitations(deduplicated);
+      console.log('\n--- INVITATION DATA FROM BACKEND ---');
+      console.log(JSON.stringify(data, null, 2));
+      console.log('--------------------------------------\n');
+      setInvitations(data || []);
     } catch (err) {
       console.error('Failed to load invitations:', err);
     }
@@ -140,21 +133,35 @@ export default function VisitorInvitations() {
                 </View>
               </View>
 
-              <View className="flex-row justify-end space-x-3 gap-3 border-t border-gray-100 pt-4 mt-2">
-                <TouchableOpacity 
-                  onPress={() => handleRejectPress(invitation.id)}
-                  className="bg-red-50 px-4 py-2 rounded-lg flex-row items-center"
-                >
-                  <X color="#ef4444" size={16} className="mr-1" />
-                  <Text className="text-red-600 font-bold ml-1">Reject</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => handleAccept(invitation.id)}
-                  className="bg-green-600 px-4 py-2 rounded-lg flex-row items-center shadow-sm"
-                >
-                  <Check color="#ffffff" size={16} className="mr-1" />
-                  <Text className="text-white font-bold ml-1">Accept</Text>
-                </TouchableOpacity>
+              <View className="flex-row justify-end border-t border-gray-100 pt-4 mt-2">
+                {invitation.status === 'APPROVED' ? (
+                  <View className="bg-green-100 px-4 py-2 rounded-lg flex-row items-center border border-green-200">
+                    <Check color="#16a34a" size={16} className="mr-1" />
+                    <Text className="text-green-700 font-bold ml-1">ACCEPTED</Text>
+                  </View>
+                ) : invitation.status === 'REJECTED' ? (
+                  <View className="bg-red-100 px-4 py-2 rounded-lg flex-row items-center border border-red-200">
+                    <X color="#dc2626" size={16} className="mr-1" />
+                    <Text className="text-red-700 font-bold ml-1">REJECTED</Text>
+                  </View>
+                ) : (
+                  <View className="flex-row space-x-3 gap-3">
+                    <TouchableOpacity 
+                      onPress={() => handleRejectPress(invitation.id)}
+                      className="bg-red-50 px-4 py-2 rounded-lg flex-row items-center"
+                    >
+                      <X color="#ef4444" size={16} className="mr-1" />
+                      <Text className="text-red-600 font-bold ml-1">Reject</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => handleAccept(invitation.id)}
+                      className="bg-green-600 px-4 py-2 rounded-lg flex-row items-center shadow-sm"
+                    >
+                      <Check color="#ffffff" size={16} className="mr-1" />
+                      <Text className="text-white font-bold ml-1">Accept</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             </View>
           ))

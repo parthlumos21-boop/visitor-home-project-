@@ -63,17 +63,7 @@ export default function SecurityVisitors() {
     try {
       const data = await getSecurityVisits(filter);
       if (mounted.current) {
-        const seen = new Set();
-        const deduplicated = (data || []).filter((visit: any) => {
-          const dateStr = new Date(visit.scheduledAt || Date.now()).toISOString().split('T')[0];
-          const vName = (visit.visitor?.name || '').toLowerCase().trim();
-          const hName = (visit.host?.name || '').toLowerCase().trim();
-          const key = `${vName}-${hName}-${dateStr}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-        setVisits(deduplicated);
+        setVisits(data || []);
         setFilteredVisits(deduplicated);
       }
     } catch (error) {

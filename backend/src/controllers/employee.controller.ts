@@ -292,8 +292,18 @@ export const createEmployeeInvitation = async (req: AuthenticatedRequest, res: R
     });
 
     const displayId = await generateDisplayId();
-    const appointmentCount = await prisma.newAppointment.count();
-    const appointmentId = `APT-${String(appointmentCount + 1).padStart(6, '0')}`;
+
+    const lastInvitation = await prisma.invitation.findFirst({ orderBy: { createdAt: 'desc' } });
+    let newInvNumber = 1;
+    if (lastInvitation?.invitationId && lastInvitation.invitationId.startsWith('INV-')) {
+      const numPart = parseInt(lastInvitation.invitationId.replace('INV-', ''), 10);
+      if (!isNaN(numPart)) newInvNumber = numPart + 1;
+    } else {
+      const count = await prisma.invitation.count();
+      newInvNumber = count + 1;
+    }
+    const invitationId = `INV-${String(newInvNumber).padStart(6, '0')}`;
+
     const detailNotes = [notes?.trim(), validFor?.trim() ? `Valid for: ${validFor.trim()}` : null]
       .filter(Boolean)
       .join('\n');
@@ -321,9 +331,9 @@ export const createEmployeeInvitation = async (req: AuthenticatedRequest, res: R
       },
     });
 
-    await prisma.newAppointment.create({
+    await prisma.invitation.create({
       data: {
-        appointmentId,
+        invitationId,
         fullName: fullName.trim(),
         mobile: mobile.trim(),
         email: email?.trim() || null,
@@ -336,9 +346,8 @@ export const createEmployeeInvitation = async (req: AuthenticatedRequest, res: R
         arrivalTime: arrivalTime?.trim() || null,
         notes: detailNotes || null,
         status: 'APPROVED',
-        decidedAt: new Date(),
-        decidedBy: hostId,
-        decidedByName: host?.name || 'Employee',
+        createdBy: hostId,
+        createdByName: host?.name || 'Employee',
       },
     });
 

@@ -69,10 +69,11 @@ io.use((socket, next) => {
   if (!token) return next(new Error('Authentication error'));
   
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'visitor_gate_secret') as any;
     socket.data.user = decoded;
     next();
   } catch (err) {
+    console.error('[Socket] Authentication error:', err);
     next(new Error('Authentication error'));
   }
 });

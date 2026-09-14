@@ -78,17 +78,7 @@ export default function ApprovalsScreen() {
         ? `/new-appointments?all=true&personToMeet=${encodeURIComponent(user.name)}` 
         : `/new-appointments?all=true`;
       const response = await api.get(url);
-      const seen = new Set();
-      const deduplicated = (response.data || []).filter((app: NewAppointment) => {
-        const vName = (app.fullName || '').toLowerCase().trim();
-        const hName = (app.personToMeet || '').toLowerCase().trim();
-        const dateStr = app.visitDate || '';
-        const key = `${vName}-${hName}-${dateStr}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-      setAppointments(deduplicated);
+      setAppointments(response.data || []);
       logMobileActivity({
         event: 'employee_approval_list_loaded',
         screen: 'Employee Approvals',

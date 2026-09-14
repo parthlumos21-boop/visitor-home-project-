@@ -17,17 +17,7 @@ export default function TotalVisits() {
   const fetchVisits = async () => {
     try {
       const data = await getMyVisitorVisits('total');
-      const seen = new Set();
-      const deduplicated = (data || []).filter((inv: any) => {
-        const dateStr = new Date(inv.scheduledAt || Date.now()).toISOString().split('T')[0];
-        const vName = (inv.visitor?.name || '').toLowerCase().trim();
-        const hName = (inv.host?.name || '').toLowerCase().trim();
-        const key = `${vName}-${hName}-${dateStr}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-      setVisits(deduplicated);
+      setVisits(data || []);
     } catch (err) {
       console.error("Error fetching visits. Ensure backend is running:", err);
     } finally {
@@ -85,8 +75,7 @@ export default function TotalVisits() {
           visits.map((visit) => (
             <View
               key={visit.id}
-              className="bg-white/70 border border-white/30 rounded-2xl p-4 mb-4 shadow-md active:opacity-85 flex-1"
-              style={{ aspectRatio: 1.4 }}
+              className="bg-white rounded-2xl mb-5 shadow-sm border border-gray-200 overflow-hidden"
             >
               {/* Top Bar */}
               <View className="flex-row items-center p-3 border-b border-gray-100 bg-gray-50">
@@ -97,65 +86,59 @@ export default function TotalVisits() {
               </View>
               
               <View className="p-4">
-                <View className="flex-row justify-between items-center mb-4">
-                  <Text className="font-bold text-gray-900 text-lg">{visit.displayId || 'Visit ID unavailable'}</Text>
-                  <View className={`rounded-full px-2 py-0.5 ${getStatusColor(visit.status)}`}>
+                <View className="flex-row justify-between items-start mb-4">
+                  <View className="flex-1 pr-4">
+                    <Text className="font-bold text-gray-900 text-lg mb-2">{visit.displayId || 'Visit ID unavailable'}</Text>
+                    <View className="flex-row items-center bg-blue-50 rounded-full px-3 py-1 self-start border border-blue-100">
+                      <Calendar color="#2563eb" size={12} className="mr-2" />
+                      <Text className="text-xs text-blue-700 font-bold tracking-wide">
+                        {new Date(visit.scheduledAt).toLocaleDateString()} at {new Date(visit.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    </View>
+                  </View>
+                  <View className={`rounded-full px-3 py-1 ${getStatusColor(visit.status)} shadow-sm`}>
                     <Text className="text-[10px] font-bold uppercase tracking-wider">{visit.status}</Text>
                   </View>
                 </View>
 
-                <View className="flex-row items-start">
-                  <View className="min-w-0 flex-1 pr-3">
-                    <View className="flex-row items-center mb-2">
-                      <UserIcon color="#6b7280" size={18} className="mr-3" />
-                      <Text className="min-w-0 flex-1 text-gray-700 font-medium" numberOfLines={2}>{visit.visitor?.name || 'Unknown Visitor'}</Text>
-                    </View>
-                    <View className="flex-row items-center mb-3">
-                      <Building2 color="#6b7280" size={18} className="mr-3" />
-                      <Text className="min-w-0 flex-1 text-gray-700 font-medium" numberOfLines={2}>Host: {visit.host?.name || 'Unknown Host'}</Text>
+                <View className="bg-gray-50 rounded-2xl p-4 mb-4 flex-row items-center border border-gray-100">
+                  <TouchableOpacity className="items-center mr-4 bg-white p-2 rounded-xl shadow-sm border border-gray-100" activeOpacity={0.78} onPress={() => openDetails(visit)}>
+                    <QRCode value={getQrValue(visit)} size={76} />
+                    <Text className="mt-2 text-[10px] text-blue-600 font-bold uppercase tracking-wider">Show QR</Text>
+                  </TouchableOpacity>
+
+                  <View className="flex-1 justify-center gap-2">
+                    <View className="flex-row items-center">
+                      <Building2 color="#6b7280" size={16} className="mr-2" />
+                      <Text className="text-gray-800 font-semibold text-sm flex-shrink">Host: {visit.host?.name || 'Unknown Host'}</Text>
                     </View>
                     {visit.createdByName ? (
-                      <View className="flex-row items-center mb-3">
-                        <UserIcon color="#6b7280" size={18} className="mr-3" />
-                        <Text className="min-w-0 flex-1 text-gray-700 font-medium" numberOfLines={2}>Created by: {visit.createdByName}</Text>
+                      <View className="flex-row items-center mt-1">
+                        <UserIcon color="#6b7280" size={16} className="mr-2" />
+                        <Text className="text-gray-800 font-semibold text-sm flex-shrink">Invited by: {visit.createdByName}</Text>
                       </View>
-                    ) : null}
-                  </View>
-
-                  <TouchableOpacity className="w-[112px] items-center" activeOpacity={0.78} onPress={() => openDetails(visit)}>
-                    <View className="rounded-lg border border-gray-100 bg-white p-2 shadow-sm">
-                      <QRCode value={getQrValue(visit)} size={92} />
-                    </View>
-                    <Text className="mt-1 text-xs text-gray-500">Tap to view QR</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View className="mt-2">
-                  <View className="flex-row items-center mb-2">
-                    <Calendar color="#6b7280" size={18} className="mr-3" />
-                    <Text className="text-gray-700">
-                      {new Date(visit.scheduledAt).toLocaleDateString()}
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center mb-5">
-                    <Clock color="#6b7280" size={18} className="mr-3" />
-                    <Text className="text-gray-700">
-                      {new Date(visit.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
+                    ) : (
+                      <View className="flex-row items-center mt-1">
+                        <UserIcon color="#6b7280" size={16} className="mr-2" />
+                        <Text className="text-gray-800 font-semibold text-sm flex-shrink">Visitor: {visit.visitor?.name || 'Unknown Visitor'}</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
 
-                <View className="flex-row items-center mb-6">
-                  <Handshake color="#6b7280" size={18} className="mr-3" />
-                  <Text className="min-w-0 flex-1 text-gray-700" numberOfLines={3}>{visit.purpose}</Text>
-                </View>
+                {visit.purpose && (
+                  <View className="flex-row items-start mb-5 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
+                    <Handshake color="#6b7280" size={16} className="mr-3 mt-0.5" />
+                    <Text className="text-gray-600 flex-1 text-sm leading-5">{visit.purpose}</Text>
+                  </View>
+                )}
 
                 <TouchableOpacity 
                   onPress={() => openDetails(visit)}
-                  className="flex-row justify-end items-center"
+                  className="flex-row justify-center items-center py-2 bg-blue-50 rounded-lg border border-blue-100"
                 >
-                  <Text className="font-bold text-blue-600 text-xs mr-1">View All Details</Text>
-                  <ArrowRight color="#2563eb" size={14} />
+                  <Text className="font-bold text-blue-600 text-sm mr-2">View All Details</Text>
+                  <ArrowRight color="#2563eb" size={16} />
                 </TouchableOpacity>
               </View>
             </View>
