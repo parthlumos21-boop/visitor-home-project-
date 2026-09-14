@@ -89,9 +89,9 @@ export default function TotalVisits() {
                 <View className="flex-row justify-between items-start mb-4">
                   <View className="flex-1 pr-4">
                     <Text className="font-bold text-gray-900 text-lg mb-2">{visit.displayId || 'Visit ID unavailable'}</Text>
-                    <View className="flex-row items-center bg-blue-50 rounded-full px-3 py-1 self-start border border-blue-100">
-                      <Calendar color="#2563eb" size={12} className="mr-2" />
-                      <Text className="text-xs text-blue-700 font-bold tracking-wide">
+                    <View className="flex-row items-center px-1 py-1 self-start">
+                      <Calendar color="#6b7280" size={12} className="mr-2" />
+                      <Text className="text-xs text-gray-600 font-semibold tracking-wide">
                         {new Date(visit.scheduledAt).toLocaleDateString()} at {new Date(visit.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </Text>
                     </View>

@@ -100,22 +100,40 @@ export default function VisitorInvitations() {
              <Text className="text-gray-500 text-center px-6">You don't have any pending invitations right now.</Text>
           </View>
         ) : (
-          invitations.map((invitation) => (
+          invitations.map((invitation) => {
+            const invitedByName = invitation.createdByName || invitation.createByName || invitation.host?.name || 'Admin';
+            const statusLabel = invitation.status === 'APPROVED'
+              ? 'ACCEPTED'
+              : invitation.status === 'REJECTED'
+                ? 'REJECTED'
+                : 'NEW';
+            const statusBadgeClass = invitation.status === 'APPROVED'
+              ? 'bg-green-100'
+              : invitation.status === 'REJECTED'
+                ? 'bg-red-100'
+                : 'bg-blue-100';
+            const statusTextClass = invitation.status === 'APPROVED'
+              ? 'text-green-800'
+              : invitation.status === 'REJECTED'
+                ? 'text-red-800'
+                : 'text-blue-800';
+
+            return (
             <View key={invitation.id} className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-blue-200">
               <View className="flex-row justify-between items-start mb-3">
                 <View className="flex-1">
                   <Text className="text-lg font-bold text-gray-900">You're Invited!</Text>
                   <Text className="text-sm font-semibold text-blue-700">{invitation.displayId}</Text>
                 </View>
-                <View className="bg-blue-100 px-3 py-1 rounded-full">
-                  <Text className="text-xs font-bold text-blue-800">NEW</Text>
+                <View className={`${statusBadgeClass} px-3 py-1 rounded-full`}>
+                  <Text className={`text-xs font-bold ${statusTextClass}`}>{statusLabel}</Text>
                 </View>
               </View>
               
               <View className="gap-2 mb-4">
                 <View className="flex-row items-center">
                   <User color="#4b5563" size={16} />
-                  <Text className="ml-2 text-gray-700">Invited by: <Text className="font-bold">{invitation.createdByName || invitation.host?.name || 'Admin'}</Text></Text>
+                  <Text className="ml-2 text-gray-700">Invited by: <Text className="font-bold">{invitedByName}</Text></Text>
                 </View>
                 <View className="flex-row items-center">
                   <User color="#4b5563" size={16} />
@@ -164,7 +182,8 @@ export default function VisitorInvitations() {
                 )}
               </View>
             </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
 

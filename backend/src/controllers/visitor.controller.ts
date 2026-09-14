@@ -579,26 +579,43 @@ export const getVisitorInvitations = async (req: AuthenticatedRequest, res: Resp
           { mobile: user.phone || '' },
           { email: user.email }
         ],
-        status: { in: ['PENDING', 'APPROVED'] }
+        status: { in: ['PENDING', 'APPROVED', 'REJECTED'] }
       },
     });
 
-    // Fetch from NewAppointment table
-    const newAppointments = await prisma.newAppointment.findMany({
-      where: {
-        OR: [
-          { mobile: user.phone || '' },
-          { email: user.email }
-        ],
-        status: { in: ['REGISTERED', 'PENDING', 'APPROVED'] }
-      },
-    });
+    const creatorIds = [
+      ...invitations.map((inv) => inv.createdBy),
+    ];
+    const creators = creatorIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: creatorIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const creatorNames = new Map(creators.map((creator) => [creator.id, creator.name]));
+    const getStoredCreatorName = (value?: string | null) => {
+      const trimmed = value?.trim();
+      if (!trimmed) return null;
+
+      const invitedByMatch = trimmed.match(/invited\s+by\s+(.+)$/i);
+      if (invitedByMatch?.[1]?.trim()) {
+        return invitedByMatch[1].trim();
+      }
+
+      return trimmed;
+    };
 
     // Helper to parse dates
     const parseDateTime = (visitDate?: string, arrivalTime?: string | null) => {
       let scheduledAt = new Date();
       try {
         if (visitDate) {
+          const isoDate = new Date(visitDate);
+          if (!Number.isNaN(isoDate.getTime()) && visitDate.includes('T')) {
+            scheduledAt = isoDate;
+            return scheduledAt;
+          }
+
           const [day, month, year] = visitDate.split('-');
           let hours = 12, minutes = 0;
           if (arrivalTime) {
@@ -618,39 +635,29 @@ export const getVisitorInvitations = async (req: AuthenticatedRequest, res: Resp
     };
 
     // Map invitations
-    const mappedInvitations = invitations.map((inv) => ({
-      id: inv.id,
-      displayId: inv.invitationId,
-      visitorId: visitorProfile?.id || null,
-      hostId: inv.createdBy,
-      createdBy: inv.createdBy,
-      createdByName: inv.createdByName || null,
-      purpose: inv.purpose,
-      status: inv.status,
-      scheduledAt: parseDateTime(inv.visitDate, inv.arrivalTime),
-      createdAt: inv.createdAt,
-      host: { name: inv.personToMeet || 'Employee' },
-      visitor: { name: inv.fullName }
-    }));
+    const mappedInvitations = invitations.map((inv) => {
+      const legacyCreateByName = (inv as any).createByName;
+      const invitedByName = getStoredCreatorName(inv.createdByName || legacyCreateByName) || creatorNames.get(inv.createdBy) || null;
 
-    // Map new appointments
-    const mappedAppointments = newAppointments.map((app) => ({
-      id: app.id,
-      displayId: app.appointmentId,
-      visitorId: visitorProfile?.id || null,
-      hostId: app.decidedBy,
-      createdBy: app.decidedBy,
-      createdByName: app.decidedByName || null,
-      purpose: app.purpose,
-      status: app.status,
-      scheduledAt: parseDateTime(app.visitDate, app.arrivalTime),
-      createdAt: app.createdAt,
-      host: { name: app.personToMeet || 'Employee' },
-      visitor: { name: app.fullName }
-    }));
+      return {
+        id: inv.id,
+        displayId: inv.invitationId,
+        visitorId: visitorProfile?.id || null,
+        hostId: inv.createdBy,
+        createdBy: inv.createdBy,
+        createdByName: invitedByName,
+        createByName: invitedByName,
+        purpose: inv.purpose,
+        status: inv.status,
+        scheduledAt: parseDateTime(inv.visitDate, inv.arrivalTime),
+        createdAt: inv.createdAt,
+        host: { name: inv.personToMeet || 'Employee' },
+        visitor: { name: inv.fullName }
+      };
+    });
 
     // Combine and sort by createdAt descending
-    const combined = [...mappedInvitations, ...mappedAppointments].sort(
+    const combined = [...mappedInvitations].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
