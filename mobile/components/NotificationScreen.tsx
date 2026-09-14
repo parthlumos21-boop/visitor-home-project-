@@ -19,7 +19,7 @@ export default function NotificationScreen() {
         if (notification.targetScreen === 'Approval' && notification.data?.appointmentId) {
       router.push(`/(admin)/approvals?appointmentId=${notification.data.appointmentId}`);
     } else if (notification.targetScreen === 'Visitors') {
-      // This routes back to the dashboard where they can see the Invitation card
+      // Routes back to the dashboard where they can see New Visitors
       router.back();
     } else if (notification.targetScreen === 'VisitDetails' && notification.data?.visitId) {
       router.push(`/(admin)/visitors`);

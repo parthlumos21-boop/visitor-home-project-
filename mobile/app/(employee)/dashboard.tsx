@@ -30,7 +30,6 @@ export default function EmployeeDashboard() {
     upcoming: 0,
     inside: 0,
     recent: 0,
-    sentInvitations: 0,
     approvals: 0,
   });
 
@@ -98,7 +97,7 @@ export default function EmployeeDashboard() {
       title: 'New Visitor',
       value: stats.newVisitors,
       icon: <CalendarPlus color="#2563eb" size={22} />,
-      onPress: () => router.push('/(employee)/invitations'),
+      onPress: () => router.push('/(employee)/new-appointment'),
     },
     {
       title: 'My Visitors',
@@ -112,12 +111,7 @@ export default function EmployeeDashboard() {
       icon: <Users color="#2563eb" size={22} />,
       onPress: () => router.push('/(employee)/visitors?filter=upcoming'),
     },
-    {
-      title: 'Sent Invitations',
-      value: stats.sentInvitations || 0,
-      icon: <Send color="#2563eb" size={22} />,
-      onPress: () => router.push('/(employee)/sent-invitations'),
-    }
+
   ];
 
     const numColumns = width >= 1024 ? 4 : width >= 768 ? 3 : 2;

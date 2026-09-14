@@ -53,7 +53,7 @@ export default function EmployeeLayout() {
         }}
       />
       <Tabs.Screen
-        name="invitations"
+        name="new-appointment"
         options={{
           href: null,
         }}
@@ -72,12 +72,7 @@ export default function EmployeeLayout() {
           tabBarIcon: ({ color }) => iconBox(<CheckCircle color={color} size={23} />),
         }}
       />
-      <Tabs.Screen
-        name="sent-invitations"
-        options={{
-          href: null,
-        }}
-      />
+
       <Tabs.Screen
         name="notifications"
         options={{

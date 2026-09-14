@@ -47,6 +47,7 @@ model Visit {
   visitorId   String
   hostId      String
   createdBy   String?   
+  createdByName String?
   purpose     String
   scheduledAt DateTime
   status      VisitStatus 
@@ -170,29 +171,3 @@ enum VisitStatus {
   RENEWED
 }
 
-model Invitation {
-  id              String    @id @default(uuid())
-  invitationId    String    @unique
-  fullName        String
-  mobile          String
-  email           String?
-  company         String?
-  visitorType     String?
-  purpose         String
-  personToMeet    String
-  department      String?
-  visitDate       String
-  arrivalTime     String?
-  vehicleNumber   String?
-  notes           String?
-  status          String    @default("APPROVED")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdBy       String    // ID of the internal employee/admin
-  createdByName   String?
-
-  @@index([createdAt])
-  @@index([mobile])
-  @@index([status])
-  @@index([createdBy])
-}

@@ -157,7 +157,7 @@ export const getEmployeeDashboard = async (req: AuthenticatedRequest, res: Respo
     const todayStart = startOfToday();
     const todayEnd = endOfToday();
 
-        const [myVisitors, newVisitors, upcoming, inside, recent, sentInvitations] = await Promise.all([
+        const [myVisitors, newVisitors, upcoming, inside, recent] = await Promise.all([
       prisma.visit.findMany({
         where: { hostId },
         distinct: ['visitorId'],
@@ -184,12 +184,8 @@ export const getEmployeeDashboard = async (req: AuthenticatedRequest, res: Respo
       prisma.visit.count({
         where: { hostId },
       }),
-      prisma.visit.count({
-        where: { createdBy: hostId },
-      }),
     ]);
-
-    res.json({ myVisitors: myVisitors.length, newVisitors, upcoming, inside, recent, sentInvitations });
+    res.json({ myVisitors: myVisitors.length, newVisitors, upcoming, inside, recent });
   } catch (error) {
     console.error('getEmployeeDashboard error:', error);
     res.status(500).json({ error: 'Failed to fetch employee dashboard' });
@@ -240,161 +236,7 @@ export const getEmployeeVisits = async (req: AuthenticatedRequest, res: Response
   }
 };
 
-export const createEmployeeInvitation = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const hostId = req.user?.id;
-    if (!hostId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
 
-    const { fullName, mobile, email, company, visitorType, purpose, visitDate, arrivalTime, validFor, notes } = req.body;
-
-    if (!fullName?.trim() || !mobile?.trim() || !purpose?.trim() || !visitDate?.trim()) {
-      res.status(400).json({ error: 'Full name, mobile, purpose, and visit date are required' });
-      return;
-    }
-
-    const scheduledAt = parseVisitDateTime(visitDate, arrivalTime);
-    if (!scheduledAt) {
-      res.status(400).json({ error: 'Invalid visit date' });
-      return;
-    }
-
-    const host = await prisma.user.findUnique({
-      where: { id: hostId },
-      select: { name: true, department: true },
-    });
-
-    const existingVisitor = await prisma.visitorProfile.findFirst({
-      where: {
-        OR: [
-          { phone: mobile.trim() },
-          ...(email?.trim() ? [{ email: email.trim() }] : []),
-        ],
-      },
-    });
-
-    const visitor = existingVisitor
-      ? await prisma.visitorProfile.update({
-      where: { id: existingVisitor.id },
-      data: {
-        name: fullName.trim(),
-        email: email?.trim() || null,
-      },
-    })
-      : await prisma.visitorProfile.create({
-      data: {
-        name: fullName.trim(),
-        phone: mobile.trim(),
-        email: email?.trim() || null,
-      },
-    });
-
-    const displayId = await generateDisplayId();
-
-    const lastInvitation = await prisma.invitation.findFirst({ orderBy: { createdAt: 'desc' } });
-    let newInvNumber = 1;
-    if (lastInvitation?.invitationId && lastInvitation.invitationId.startsWith('INV-')) {
-      const numPart = parseInt(lastInvitation.invitationId.replace('INV-', ''), 10);
-      if (!isNaN(numPart)) newInvNumber = numPart + 1;
-    } else {
-      const count = await prisma.invitation.count();
-      newInvNumber = count + 1;
-    }
-    const invitationId = `INV-${String(newInvNumber).padStart(6, '0')}`;
-
-    const detailNotes = [notes?.trim(), validFor?.trim() ? `Valid for: ${validFor.trim()}` : null]
-      .filter(Boolean)
-      .join('\n');
-
-    const visit = await prisma.visit.create({
-      data: {
-        displayId,
-        visitorId: visitor.id,
-        hostId,
-        createdBy: hostId,
-        purpose: notes?.trim() ? `${purpose.trim()} - ${notes.trim()}` : purpose.trim(),
-        scheduledAt,
-        status: VisitStatus.APPROVED,
-      },
-      include: {
-        visitor: true,
-        host: true,
-      },
-    });
-    await prisma.qrCode.create({
-      data: {
-        visitId: visit.id,
-        token: randomUUID(),
-        expiresAt: endOfVisitDay(scheduledAt),
-      },
-    });
-
-    await prisma.invitation.create({
-      data: {
-        invitationId,
-        fullName: fullName.trim(),
-        mobile: mobile.trim(),
-        email: email?.trim() || null,
-        company: company?.trim() || null,
-        visitorType: visitorType?.trim() || null,
-        purpose: purpose.trim(),
-        personToMeet: host?.name || 'Employee',
-        department: host?.department || null,
-        visitDate: visitDate.trim(),
-        arrivalTime: arrivalTime?.trim() || null,
-        notes: detailNotes || null,
-        status: 'APPROVED',
-        createdBy: hostId,
-        createdByName: host?.name || 'Employee',
-      },
-    });
-
-                await NotificationService.sendNotification({
-      type: 'NEW_VISITOR_INVITATION',
-      title: 'Visitor Invitation Approved',
-      message: `${visit.visitor.name}'s visit is approved.\n${visit.displayId}`,
-      visitorId: visit.displayId || undefined,
-      visitId: visit.id,
-      recipientId: hostId,
-      recipientRole: Role.EMPLOYEE,
-      targetScreen: 'Visitors',
-      data: { visitId: visit.id },
-    });
-
-    const visitorUser = await prisma.user.findFirst({
-      where: {
-        role: Role.VISITOR,
-        OR: [
-          { phone: visitor.phone },
-          ...(visitor.email ? [{ email: visitor.email }] : []),
-        ],
-      },
-      select: { id: true, role: true },
-    });
-
-    // Send notification to the visitor
-    if (visitorUser) {
-      await NotificationService.sendNotification({
-        type: 'APPOINTMENT_APPROVED',
-        title: 'Visit Approved',
-        message: `Your visit with ${host?.name || 'Employee'} is approved.`,
-        visitorId: visit.displayId || undefined,
-        visitId: visit.id,
-        recipientId: visitorUser.id,
-        recipientRole: visitorUser.role,
-        targetScreen: 'TotalVisits',
-        data: { visitId: visit.id },
-      });
-    }
-
-    res.status(201).json(visit);
-  } catch (error: any) {
-    console.error('createEmployeeInvitation error:', error);
-    res.status(500).json({ error: 'Failed to create visitor invitation' });
-  }
-};
 
 export const createEmployee = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

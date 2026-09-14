@@ -64,7 +64,7 @@ export default function SecurityVisitors() {
       const data = await getSecurityVisits(filter);
       if (mounted.current) {
         setVisits(data || []);
-        setFilteredVisits(deduplicated);
+        setFilteredVisits(data || []);
       }
     } catch (error) {
       console.error('Failed to fetch security visits:', error);

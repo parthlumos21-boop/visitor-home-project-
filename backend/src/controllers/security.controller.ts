@@ -239,16 +239,7 @@ export const checkInVisitor = async (req: Request, res: Response): Promise<void>
         },
         data: { status: 'CHECKED_IN' }
       });
-      await prisma.invitation.updateMany({
-        where: {
-          OR: [
-            ...(visit.visitor?.phone ? [{ mobile: visit.visitor.phone }] : []),
-            ...(visit.visitor?.email ? [{ email: visit.visitor.email }] : [])
-          ],
-          status: 'APPROVED'
-        },
-        data: { status: 'CHECKED_IN' }
-      });
+
     }
 
     // Trigger Push Notifications to Host Employee & Admin
@@ -320,16 +311,7 @@ export const checkOutVisitor = async (req: Request, res: Response): Promise<void
         },
         data: { status: 'COMPLETED' }
       });
-      await prisma.invitation.updateMany({
-        where: {
-          OR: [
-            ...(visit.visitor?.phone ? [{ mobile: visit.visitor.phone }] : []),
-            ...(visit.visitor?.email ? [{ email: visit.visitor.email }] : [])
-          ],
-          status: 'CHECKED_IN'
-        },
-        data: { status: 'COMPLETED' }
-      });
+
     }
 
     // Dispatch Push Notifications to Host Employee & Admin on Check-Out

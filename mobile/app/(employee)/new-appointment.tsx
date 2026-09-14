@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { ChevronDown, X, ArrowLeft, Calendar, Clock } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CustomButton } from '../../components/CustomButton';
-import { createEmployeeInvitation } from '../../services/employee';
+import { createNewAppointment } from '../../services/appointments';
 import { getApiErrorMessage } from '../../services/errorMessage';
 
 // Reusable Select Component
@@ -55,7 +55,7 @@ const SelectField = ({ label, value, options, onSelect, placeholder }: any) => {
   );
 };
 
-export default function EmployeeInvitations() {
+export default function EmployeeNewAppointment() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(false);
@@ -102,16 +102,16 @@ export default function EmployeeInvitations() {
 
     setIsLoading(true);
     try {
-      await createEmployeeInvitation({
+      await createNewAppointment({
         fullName: fullName.trim(),
         mobile: mobileNumber.trim(),
         email: emailAddress.trim() || undefined,
         company: companyName.trim() || undefined,
         visitorType,
         purpose,
+        personToMeet: 'Me',
         visitDate: appointmentDate.toISOString(),
         arrivalTime,
-        validFor,
         notes: notes.trim() || undefined,
       });
       Alert.alert('Success', 'Visit approved and added to the visitor total visits.', [
@@ -125,7 +125,7 @@ export default function EmployeeInvitations() {
         },
       ]);
     } catch (error) {
-      Alert.alert('Error', getApiErrorMessage(error, 'Failed to send invitation.'));
+      Alert.alert('Error', getApiErrorMessage(error, 'Failed to create appointment.'));
     } finally {
       setIsLoading(false);
     }
@@ -351,7 +351,7 @@ export default function EmployeeInvitations() {
             <Text className="text-gray-700 font-bold">Cancel</Text>
           </TouchableOpacity>
           <CustomButton
-            title="Send Invitation"
+            title="Create Appointment"
             onPress={handleSendInvitation}
             isLoading={isLoading}
             className="h-12 min-w-[168px] px-5"

@@ -28,21 +28,9 @@ export interface EmployeeDashboardStats {
   upcoming: number;
   inside: number;
   recent: number;
-  sentInvitations: number;
 }
 
-export interface EmployeeInvitationPayload {
-  fullName: string;
-  mobile: string;
-  email?: string;
-  company?: string;
-  visitorType?: string;
-  purpose: string;
-  visitDate: string;
-  arrivalTime?: string;
-  validFor?: string;
-  notes?: string;
-}
+
 
 export const getEmployees = async (department?: string): Promise<Employee[]> => {
   const params = department && department !== 'All Departments' ? { department } : {};
@@ -75,10 +63,7 @@ export const getEmployeeDashboard = async (): Promise<EmployeeDashboardStats> =>
   return response.data;
 };
 
-export const createEmployeeInvitation = async (data: EmployeeInvitationPayload) => {
-  const response = await api.post('/employees/invitations', data);
-  return response.data;
-};
+
 
 export const getEmployeeVisits = async (filter?: string) => {
   const response = await api.get('/employees/visits', { params: filter ? { filter } : undefined });

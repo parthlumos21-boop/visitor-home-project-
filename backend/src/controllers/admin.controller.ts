@@ -11,10 +11,8 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
     const [
       totalVisits,
       newAppointmentPending,
-      invitationPending,
       currentlyInside,
       newAppointmentToday,
-      invitationToday,
       admin,
       totalEmployees,
       employeesByDeptRaw,
@@ -22,9 +20,6 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
     ] = await Promise.all([
       prisma.visit.count(),
       prisma.newAppointment.count({
-        where: { status: { in: ['REGISTERED', 'PENDING'] } },
-      }),
-      prisma.invitation.count({
         where: { status: { in: ['REGISTERED', 'PENDING'] } },
       }),
       prisma.visit.count({
@@ -35,11 +30,6 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
         },
       }),
       prisma.newAppointment.count({
-        where: {
-          visitDate: `${String(todayStart.getDate()).padStart(2, '0')}-${String(todayStart.getMonth() + 1).padStart(2, '0')}-${todayStart.getFullYear()}`,
-        },
-      }),
-      prisma.invitation.count({
         where: {
           visitDate: `${String(todayStart.getDate()).padStart(2, '0')}-${String(todayStart.getMonth() + 1).padStart(2, '0')}-${todayStart.getFullYear()}`,
         },
@@ -63,8 +53,7 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
       })
     ]);
 
-    const pendingApprovals = newAppointmentPending + invitationPending;
-    const appointmentsToday = newAppointmentToday + invitationToday;
+    const pendingApprovals = newAppointmentPending;
 
     const employeesByDept: Record<string, number> = {};
     (employeesByDeptRaw as any[]).forEach((dept: any) => {
@@ -77,7 +66,7 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
       totalVisits,
       pendingApprovals,
       currentlyInside,
-      appointmentsToday,
+      appointmentsToday: newAppointmentToday,
       totalEmployees,
       totalSecurity,
       source: 'postgres',
@@ -87,7 +76,7 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
       totalVisits,
       pendingApprovals,
       currentlyInside,
-      appointmentsToday,
+      appointmentsToday: newAppointmentToday,
       adminName: admin?.name || 'Admin User',
       totalEmployees,
       employeesByDept,

@@ -4,7 +4,6 @@ import { Role } from '@prisma/client';
 import { authenticate, requireRole } from '../middleware/auth.middleware';
 import {
   createEmployee,
-  createEmployeeInvitation,
   getEmployeeDashboard,
   getEmployees,
   getEmployeeById,
@@ -25,7 +24,7 @@ const requireEmployeeSelf = (req: any, res: any, next: any) => {
 
 router.get('/dashboard', authenticate, requireEmployeeSelf, getEmployeeDashboard);
 router.get('/visits', authenticate, requireEmployeeSelf, getEmployeeVisits);
-router.post('/invitations', authenticate, requireEmployeeSelf, createEmployeeInvitation);
+
 
 // Only Super Admin can manage employees
 router.use(authenticate, requireRole(Role.SUPER_ADMIN));

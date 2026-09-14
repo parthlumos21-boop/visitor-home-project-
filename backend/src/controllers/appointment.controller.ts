@@ -155,17 +155,8 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
       },
     });
     
-    const duplicateInvitation = isInternalCreator ? await prisma.invitation.findFirst({
-      where: {
-        mobile: visitorPhone,
-        personToMeet: host.name,
-        visitDate: visitDate.trim(),
-        status: { notIn: ['REJECTED', 'CANCELLED', 'EXPIRED', 'COMPLETED'] },
-      },
-    }) : null;
-
-    if (duplicateAppointment || duplicateInvitation) {
-      res.status(400).json({ error: 'An active appointment or invitation already exists for this visitor and host on this date.' });
+    if (duplicateAppointment) {
+      res.status(400).json({ error: 'An active appointment already exists for this visitor and host on this date.' });
       return;
     }
 
@@ -182,45 +173,9 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
 
     const initialVisitStatus = isInternalCreator ? VisitStatus.APPROVED : VisitStatus.PENDING;
 
-    let appointmentOrInvitation;
-    let createdType: 'APPOINTMENT' | 'INVITATION';
+    let appointmentOrInvitation: any = null;
 
-    if (isInternalCreator) {
-      createdType = 'INVITATION';
-      const lastInvitation = await prisma.invitation.findFirst({ orderBy: { createdAt: 'desc' } });
-      let newInvNumber = 1;
-      if (lastInvitation?.invitationId && lastInvitation.invitationId.startsWith('INV-')) {
-        const numPart = parseInt(lastInvitation.invitationId.replace('INV-', ''), 10);
-        if (!isNaN(numPart)) newInvNumber = numPart + 1;
-      } else {
-        const count = await prisma.invitation.count();
-        newInvNumber = count + 1;
-      }
-      const invitationId = `INV-${String(newInvNumber).padStart(6, '0')}`;
-
-      appointmentOrInvitation = await prisma.invitation.create({
-        data: {
-          id: randomUUID(),
-          invitationId,
-          fullName: visitorName,
-          mobile: visitorPhone,
-          email: visitorEmail,
-          company: company?.trim() || null,
-          visitorType: visitorType?.trim() || null,
-          purpose: purpose.trim(),
-          personToMeet: host.name,
-          department: department?.trim() || host.department || null,
-          visitDate: visitDate.trim(),
-          arrivalTime: arrivalTime?.trim() || null,
-          vehicleNumber: vehicleNumber?.trim() || null,
-          notes: notes?.trim() || null,
-          status: 'APPROVED',
-          createdBy: creator!.id,
-          createdByName: creator!.name,
-        },
-      });
-    } else {
-      createdType = 'APPOINTMENT';
+    if (!isInternalCreator) {
       const lastAppointment = await prisma.newAppointment.findFirst({ orderBy: { createdAt: 'desc' } });
       let newAppNumber = 1;
       if (lastAppointment?.appointmentId && lastAppointment.appointmentId.startsWith('APT-')) {
@@ -259,6 +214,7 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
         visitorId: visitor.id,
         hostId: host.id,
         createdBy: creator?.id || null,
+        createdByName: creator?.name || null,
         purpose: purpose.trim(),
         scheduledAt,
         status: initialVisitStatus,
@@ -276,18 +232,26 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
       },
     });
 
-    const notificationPayload = {
+    const notificationPayload = appointmentOrInvitation ? {
       ...appointmentOrInvitation,
-      appointmentId: createdType === 'INVITATION' ? (appointmentOrInvitation as any).invitationId : (appointmentOrInvitation as any).appointmentId,
+      appointmentId: appointmentOrInvitation.appointmentId,
+    } : {
+      id: visit.id,
+      fullName: visitorName,
+      mobile: visitorPhone,
+      purpose: purpose.trim(),
+      personToMeet: host.name,
+      createdAt: visit.createdAt,
+      appointmentId: visit.displayId,
     };
 
-    console.log(`[New ${createdType}]`, JSON.stringify({
+    console.log(`[New Appointment/Visit]`, JSON.stringify({
       id: notificationPayload.appointmentId,
-      fullName: appointmentOrInvitation.fullName,
-      mobile: appointmentOrInvitation.mobile,
-      purpose: appointmentOrInvitation.purpose,
-      personToMeet: appointmentOrInvitation.personToMeet,
-      createdAt: appointmentOrInvitation.createdAt,
+      fullName: notificationPayload.fullName,
+      mobile: notificationPayload.mobile,
+      purpose: notificationPayload.purpose,
+      personToMeet: notificationPayload.personToMeet,
+      createdAt: notificationPayload.createdAt,
     }));
 
     // Send notification strictly to Admin (Keval V Shah) via Dispatcher
@@ -320,7 +284,7 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
         recipientId: visitorUser.id,
         recipientRole: visitorUser.role,
         targetScreen: 'TotalVisits',
-        data: { visitId: visit.id, appointmentId: appointmentOrInvitation.id },
+        data: { visitId: visit.id, appointmentId: appointmentOrInvitation?.id },
       });
     }
 

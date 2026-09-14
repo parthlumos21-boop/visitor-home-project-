@@ -3,7 +3,6 @@ import { View, ScrollView, Text, TouchableOpacity, Alert, RefreshControl } from 
 import { ClipboardList, Clock, History, Plus, LogOut, Mail, ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
-import { getVisitorInvitations } from '../../services/visits';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function VisitorDashboard() {
@@ -11,24 +10,10 @@ export default function VisitorDashboard() {
   const { user, clearAuth } = useAuthStore();
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
-  const [invitations, setInvitations] = useState<any[]>([]);
-
-  const loadInvitations = async () => {
-    try {
-      const data = await getVisitorInvitations();
-      setInvitations(data || []);
-    } catch (err) {
-      console.error('Failed to load invitations:', err);
-    }
-  };
-
-  useEffect(() => {
-    loadInvitations();
-  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadInvitations();
+    // await loadOtherData();
     setRefreshing(false);
   }, []);
 
@@ -86,25 +71,7 @@ export default function VisitorDashboard() {
 
       <Text className="text-gray-500 font-bold mb-4 ml-1 mt-2">YOUR VISIT OVERVIEW</Text>
 
-      {/* Invitations Card */}
-      <TouchableOpacity 
-        onPress={() => handleCardPress('Invitations', 'invitations')} 
-        className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 active:opacity-70 flex-row items-center justify-between"
-      >
-        <View className="flex-row items-center flex-1">
-          <View className="bg-blue-100 p-3 rounded-full mr-4">
-            <Mail color="#2563eb" size={24} />
-          </View>
-          <View className="flex-1">
-            <Text className="text-gray-900 font-bold mb-1">INVITATIONS</Text>
-            <Text className="text-gray-500 text-xs">Waiting for your response</Text>
-          </View>
-        </View>
-        <View className="flex-row items-center">
-          <Text className="text-xl font-bold text-gray-900 mr-2">{invitations.length < 10 ? `0${invitations.length}` : invitations.length}</Text>
-          <ChevronRight color="#9ca3af" size={20} />
-        </View>
-      </TouchableOpacity>
+
 
       <TouchableOpacity onPress={() => handleCardPress('Total Visits', 'total-visits')} className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 active:opacity-70 flex-row items-center justify-between">
         <View className="flex-row items-center flex-1">

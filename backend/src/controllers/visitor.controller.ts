@@ -30,7 +30,7 @@ export const getVisitors = async (req: Request, res: Response): Promise<void> =>
     res.json(
       visits.map((visit) => ({
         ...visit,
-        createdByName: visit.createdBy ? creatorNames.get(visit.createdBy) || null : null,
+        createdByName: visit.createdByName || (visit.createdBy ? creatorNames.get(visit.createdBy) || null : null),
       }))
     );
   } catch (error) {
@@ -53,7 +53,8 @@ export const createVisitorRequest = async (req: Request, res: Response): Promise
         hostId,
         purpose,
         scheduledAt: new Date(scheduledAt),
-        status: VisitStatus.PENDING
+        status: VisitStatus.PENDING,
+        createdByName: null // Visitor requests are self-created
       },
       include: {
         visitor: true,
@@ -205,86 +206,7 @@ export const updateVisitStatus = async (req: Request, res: Response): Promise<vo
     const id = req.params.id as string;
     const { status, rejectionReason } = req.body;
     
-    // Check if the ID belongs to an Invitation
-    const invitation = await prisma.invitation.findUnique({ where: { id } });
-    if (invitation) {
-      const updatedInv = await prisma.invitation.update({
-        where: { id },
-        data: { 
-          status,
-          ...(rejectionReason && { notes: invitation.notes ? `${invitation.notes}\nRejection Reason: ${rejectionReason}` : `Rejection Reason: ${rejectionReason}` })
-        }
-      });
-      if (status === 'APPROVED') {
-        const creatorId = invitation.createdBy;
-        if (creatorId) {
-          await NotificationService.sendNotification({
-            recipientId: creatorId,
-            type: 'INVITATION_ACCEPTED',
-            title: 'Invitation Accepted',
-            message: `${invitation.fullName} has accepted your invitation.`,
-            targetScreen: 'TotalVisits',
-            channelId: 'max',
-            priority: 'high',
-          }).catch(console.error);
-        }
-        const visitorUser = await prisma.user.findFirst({
-          where: { 
-            role: 'VISITOR',
-            OR: [
-              { phone: invitation.mobile },
-              ...(invitation.email ? [{ email: invitation.email }] : [])
-            ]
-          }
-        });
-        if (visitorUser) {
-          await NotificationService.sendNotification({
-            recipientId: visitorUser.id,
-            type: 'INVITATION_ACCEPTED',
-            title: 'Invitation Accepted',
-            message: `You have successfully accepted the invitation.`,
-            targetScreen: 'Invitations',
-            channelId: 'max',
-            priority: 'high',
-          }).catch(console.error);
-        }
-      } else if (status === 'REJECTED') {
-        const creatorId = invitation.createdBy;
-        if (creatorId) {
-          await NotificationService.sendNotification({
-            recipientId: creatorId,
-            type: 'INVITATION_REJECTED',
-            title: 'Invitation Rejected',
-            message: `${invitation.fullName} has rejected your invitation.${rejectionReason ? `\nReason: ${rejectionReason}` : ''}`,
-            targetScreen: 'TotalVisits',
-            channelId: 'max',
-            priority: 'high',
-          }).catch(console.error);
-        }
-        const visitorUser = await prisma.user.findFirst({
-          where: { 
-            role: 'VISITOR',
-            OR: [
-              { phone: invitation.mobile },
-              ...(invitation.email ? [{ email: invitation.email }] : [])
-            ]
-          }
-        });
-        if (visitorUser) {
-          await NotificationService.sendNotification({
-            recipientId: visitorUser.id,
-            type: 'INVITATION_REJECTED',
-            title: 'Invitation Rejected',
-            message: `You have successfully rejected the invitation.`,
-            targetScreen: 'Invitations',
-            channelId: 'max',
-            priority: 'high',
-          }).catch(console.error);
-        }
-      }
-      res.status(200).json(updatedInv);
-      return;
-    }
+
 
     // Check if the ID belongs to a NewAppointment
     const appointment = await prisma.newAppointment.findUnique({ where: { id } });
@@ -551,122 +473,7 @@ export const getMyVisitorVisits = async (req: AuthenticatedRequest, res: Respons
   }
 };
 
-export const getVisitorInvitations = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user?.id },
-      select: { email: true, phone: true }
-    });
 
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    const visitorProfile = await prisma.visitorProfile.findFirst({
-      where: {
-        OR: [
-          { email: user.email },
-          { phone: user.phone || '' }
-        ]
-      }
-    });
-
-    // Fetch from Invitation table
-    const invitations = await prisma.invitation.findMany({
-      where: {
-        OR: [
-          { mobile: user.phone || '' },
-          { email: user.email }
-        ],
-        status: { in: ['PENDING', 'APPROVED', 'REJECTED'] }
-      },
-    });
-
-    const creatorIds = [
-      ...invitations.map((inv) => inv.createdBy),
-    ];
-    const creators = creatorIds.length
-      ? await prisma.user.findMany({
-          where: { id: { in: creatorIds } },
-          select: { id: true, name: true },
-        })
-      : [];
-    const creatorNames = new Map(creators.map((creator) => [creator.id, creator.name]));
-    const getStoredCreatorName = (value?: string | null) => {
-      const trimmed = value?.trim();
-      if (!trimmed) return null;
-
-      const invitedByMatch = trimmed.match(/invited\s+by\s+(.+)$/i);
-      if (invitedByMatch?.[1]?.trim()) {
-        return invitedByMatch[1].trim();
-      }
-
-      return trimmed;
-    };
-
-    // Helper to parse dates
-    const parseDateTime = (visitDate?: string, arrivalTime?: string | null) => {
-      let scheduledAt = new Date();
-      try {
-        if (visitDate) {
-          const isoDate = new Date(visitDate);
-          if (!Number.isNaN(isoDate.getTime()) && visitDate.includes('T')) {
-            scheduledAt = isoDate;
-            return scheduledAt;
-          }
-
-          const [day, month, year] = visitDate.split('-');
-          let hours = 12, minutes = 0;
-          if (arrivalTime) {
-            const timeMatch = arrivalTime.match(/(\d+):(\d+)\s*(AM|PM)?/i);
-            if (timeMatch) {
-              hours = parseInt(timeMatch[1], 10);
-              minutes = parseInt(timeMatch[2], 10);
-              const ampm = timeMatch[3]?.toUpperCase();
-              if (ampm === 'PM' && hours < 12) hours += 12;
-              if (ampm === 'AM' && hours === 12) hours = 0;
-            }
-          }
-          scheduledAt = new Date(Number(year), Number(month) - 1, Number(day), hours, minutes);
-        }
-      } catch (e) {}
-      return scheduledAt;
-    };
-
-    // Map invitations
-    const mappedInvitations = invitations.map((inv) => {
-      const legacyCreateByName = (inv as any).createByName;
-      const invitedByName = getStoredCreatorName(inv.createdByName || legacyCreateByName) || creatorNames.get(inv.createdBy) || null;
-
-      return {
-        id: inv.id,
-        displayId: inv.invitationId,
-        visitorId: visitorProfile?.id || null,
-        hostId: inv.createdBy,
-        createdBy: inv.createdBy,
-        createdByName: invitedByName,
-        createByName: invitedByName,
-        purpose: inv.purpose,
-        status: inv.status,
-        scheduledAt: parseDateTime(inv.visitDate, inv.arrivalTime),
-        createdAt: inv.createdAt,
-        host: { name: inv.personToMeet || 'Employee' },
-        visitor: { name: inv.fullName }
-      };
-    });
-
-    // Combine and sort by createdAt descending
-    const combined = [...mappedInvitations].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-
-    res.json(combined);
-  } catch (error) {
-    console.error('getVisitorInvitations error:', error);
-    res.status(500).json({ error: 'Failed to fetch invitations' });
-  }
-};
 
 
 

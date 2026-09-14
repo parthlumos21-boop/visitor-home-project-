@@ -1,4 +1,4 @@
-﻿import { Tabs, useRouter } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Home, Calendar, Bell, User as UserIcon, LogOut, Mail } from 'lucide-react-native';
 import { TouchableOpacity, Text, View, Alert } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
@@ -97,13 +97,7 @@ export default function VisitorLayout() {
           title: 'Visit Details',
         }}
       />
-      <Tabs.Screen
-        name="invitations"
-        options={{
-          title: 'Invitations',
-          tabBarIcon: ({ color }) => <Mail color={color} size={24} />,
-        }}
-      />
+
       <Tabs.Screen
         name="appointment"
         options={{
