@@ -18,7 +18,7 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
       employeesByDeptRaw,
       totalSecurity
     ] = await Promise.all([
-      prisma.visit.count(),
+      prisma.newAppointment.count(),
       prisma.newAppointment.count({
         where: { status: { in: ['REGISTERED', 'PENDING'] } },
       }),
@@ -69,7 +69,7 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
       appointmentsToday: newAppointmentToday,
       totalEmployees,
       totalSecurity,
-      source: 'postgres',
+      source: 'public.NewAppointment',
     }));
 
     res.json({

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getVisitors, createVisitorRequest, updateVisitStatus, checkVisitor, createVisitor, getMyVisitorVisits, getVisitorHosts } from '../controllers/visitor.controller';
+import { getVisitors, createVisitorRequest, updateVisitStatus, checkVisitor, createVisitor, getMyVisitorVisits, getVisitorHosts, getMyVisitorStats } from '../controllers/visitor.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -9,6 +9,7 @@ router.post('/check', checkVisitor);
 router.post('/profile', createVisitor);
 router.get('/hosts', authenticate, getVisitorHosts);
 router.get('/my-visits', authenticate, getMyVisitorVisits);
+router.get('/my-stats', authenticate, getMyVisitorStats);
 router.post('/', createVisitorRequest);
 router.patch('/:id/status', updateVisitStatus);
 

@@ -4,7 +4,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Share, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar as CalendarIcon, Clock, Handshake, Building2, User as UserIcon, Phone, Download, Share2 } from 'lucide-react-native';
+import { ArrowLeft, Calendar as CalendarIcon, Clock, Handshake, Building2, User as UserIcon, Phone, Download, Share2, Check } from 'lucide-react-native';
 import { getMyVisitorVisits } from '../../../services/visits';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -63,8 +63,8 @@ export default function VisitDetails() {
 
   const fetchVisitDetails = async () => {
     try {
-      const data = await getMyVisitorVisits();
-      const found = data.find((v: any) => v.id === id);
+      const res = await getMyVisitorVisits(undefined, 1, 1000);
+      const found = res.data?.find((v: any) => v.id === id);
       setVisit(found);
     } catch (err) {
       console.error("Error fetching visit details:", err);
@@ -155,10 +155,16 @@ export default function VisitDetails() {
               <Building2 color="#9ca3af" size={20} className="mr-3" />
               <Text className="min-w-0 flex-1 text-gray-800 font-medium text-base" numberOfLines={3}>{visit.host?.name || 'N/A'}</Text>
             </View>
-            <View className="flex-row items-center">
+            <View className="flex-row items-center mb-3">
               <Handshake color="#9ca3af" size={20} className="mr-3" />
               <Text className="min-w-0 flex-1 text-gray-800 font-medium text-base" numberOfLines={4}>{visit.purpose || 'N/A'}</Text>
             </View>
+            {visit.decidedByName && (
+              <View className="flex-row items-center">
+                <Check color="#22c55e" size={20} className="mr-3" />
+                <Text className="min-w-0 flex-1 text-emerald-600 font-bold text-base" numberOfLines={3}>Approved by {visit.decidedByName}</Text>
+              </View>
+            )}
           </View>
 
           {/* Time Info */}

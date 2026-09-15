@@ -3,21 +3,27 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator 
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Search, Calendar, Clock, Handshake, Building2, User as UserIcon, Check, ArrowRight } from 'lucide-react-native';
 import { getMyVisitorVisits } from '../../services/visits';
-import QRCode from 'react-native-qrcode-svg';
 
 export default function TotalVisits() {
   const router = useRouter();
   const [visits, setVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchVisits();
-  }, []);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
 
-  const fetchVisits = async () => {
+  useEffect(() => {
+    fetchVisits(page);
+  }, [page]);
+
+  const fetchVisits = async (currentPage: number) => {
     try {
-      const data = await getMyVisitorVisits('total');
-      setVisits(data || []);
+      setLoading(true);
+      const res = await getMyVisitorVisits('total', currentPage, 6);
+      setVisits(res.data || []);
+      setTotalPages(res.totalPages || 1);
+      setTotalRecords(res.total || 0);
     } catch (err) {
       console.error("Error fetching visits. Ensure backend is running:", err);
     } finally {
@@ -30,8 +36,6 @@ export default function TotalVisits() {
     // @ts-ignore
     router.push(`/(visitor)/visit-details/${visit.id}`);
   };
-
-  const getQrValue = (visit: any) => visit.qrCode?.token || visit.displayId || visit.id;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -65,7 +69,7 @@ export default function TotalVisits() {
             placeholderTextColor="#9ca3af"
           />
         </View>
-        <Text className="text-gray-500 mb-6 font-medium">Showing {visits.length} visits</Text>
+        <Text className="text-gray-500 mb-6 font-medium">Showing {visits.length} of {totalRecords} visits (Page {page} of {totalPages})</Text>
 
         {loading ? (
           <ActivityIndicator size="large" color="#2563eb" />
@@ -96,17 +100,19 @@ export default function TotalVisits() {
                       </Text>
                     </View>
                   </View>
-                  <View className={`rounded-full px-3 py-1 ${getStatusColor(visit.status)} shadow-sm`}>
-                    <Text className="text-[10px] font-bold uppercase tracking-wider">{visit.status}</Text>
+                  <View className="items-end gap-1">
+                    <View className={`rounded-full px-3 py-1 ${getStatusColor(visit.status)} shadow-sm`}>
+                      <Text className="text-[10px] font-bold uppercase tracking-wider">{visit.status}</Text>
+                    </View>
+                    {visit.createdByName && (
+                      <View className="rounded-full px-2 py-1 bg-purple-100 border border-purple-200 shadow-sm">
+                        <Text className="text-[9px] font-black text-purple-700 uppercase tracking-widest">DIRECT PASS</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
 
                 <View className="bg-gray-50 rounded-2xl p-4 mb-4 flex-row items-center border border-gray-100">
-                  <TouchableOpacity className="items-center mr-4 bg-white p-2 rounded-xl shadow-sm border border-gray-100" activeOpacity={0.78} onPress={() => openDetails(visit)}>
-                    <QRCode value={getQrValue(visit)} size={76} />
-                    <Text className="mt-2 text-[10px] text-blue-600 font-bold uppercase tracking-wider">Show QR</Text>
-                  </TouchableOpacity>
-
                   <View className="flex-1 justify-center gap-2">
                     <View className="flex-row items-center">
                       <Building2 color="#6b7280" size={16} className="mr-2" />
@@ -115,12 +121,18 @@ export default function TotalVisits() {
                     {visit.createdByName ? (
                       <View className="flex-row items-center mt-1">
                         <UserIcon color="#6b7280" size={16} className="mr-2" />
-                        <Text className="text-gray-800 font-semibold text-sm flex-shrink">Invited by: {visit.createdByName}</Text>
+                        <Text className="text-gray-800 font-semibold text-sm flex-shrink">Added by: {visit.createdByName}</Text>
                       </View>
                     ) : (
                       <View className="flex-row items-center mt-1">
                         <UserIcon color="#6b7280" size={16} className="mr-2" />
                         <Text className="text-gray-800 font-semibold text-sm flex-shrink">Visitor: {visit.visitor?.name || 'Unknown Visitor'}</Text>
+                      </View>
+                    )}
+                    {visit.decidedByName && (
+                      <View className="flex-row items-center mt-1">
+                        <Check color="#22c55e" size={16} className="mr-2" />
+                        <Text className="text-gray-800 font-semibold text-sm flex-shrink">Approved by: {visit.decidedByName}</Text>
                       </View>
                     )}
                   </View>
@@ -143,6 +155,29 @@ export default function TotalVisits() {
               </View>
             </View>
           ))
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && totalPages > 1 && (
+          <View className="flex-row justify-between items-center mt-2 mb-8">
+            <TouchableOpacity 
+              disabled={page <= 1}
+              onPress={() => setPage(p => p - 1)}
+              className={`px-4 py-2 rounded-lg ${page <= 1 ? 'bg-gray-200' : 'bg-blue-100'}`}
+            >
+              <Text className={`font-bold ${page <= 1 ? 'text-gray-400' : 'text-blue-700'}`}>Previous</Text>
+            </TouchableOpacity>
+            
+            <Text className="text-gray-600 font-medium">Page {page} of {totalPages}</Text>
+            
+            <TouchableOpacity 
+              disabled={page >= totalPages}
+              onPress={() => setPage(p => p + 1)}
+              className={`px-4 py-2 rounded-lg ${page >= totalPages ? 'bg-gray-200' : 'bg-blue-100'}`}
+            >
+              <Text className={`font-bold ${page >= totalPages ? 'text-gray-400' : 'text-blue-700'}`}>Next</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </ScrollView>
     </View>

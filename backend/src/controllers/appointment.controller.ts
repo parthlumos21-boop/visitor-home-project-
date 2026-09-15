@@ -52,6 +52,8 @@ const endOfVisitDay = (date: Date) => {
   return expiresAt;
 };
 
+const isKevalVShah = (value?: string | null) => value?.trim().toLowerCase() === 'keval v shah';
+
 export const createNewAppointment = async (req: Request, res: Response): Promise<void> => {
   try {
     const {
@@ -142,9 +144,6 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
       },
     });
 
-    const currentUser = (req as any).user;
-    const isInternalCreator = currentUser && (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'EMPLOYEE');
-
     // Check for duplicate active appointment or invitation
     const duplicateAppointment = await prisma.newAppointment.findFirst({
       where: {
@@ -171,11 +170,13 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
 
     const displayId = await generateVisitDisplayId();
 
-    const initialVisitStatus = isInternalCreator ? VisitStatus.APPROVED : VisitStatus.PENDING;
+    const shouldAutoApprove = isKevalVShah(creator?.name);
+
+    const initialVisitStatus = shouldAutoApprove ? VisitStatus.APPROVED : VisitStatus.PENDING;
 
     let appointmentOrInvitation: any = null;
 
-    if (!isInternalCreator) {
+    if (!shouldAutoApprove) {
       const lastAppointment = await prisma.newAppointment.findFirst({ orderBy: { createdAt: 'desc' } });
       let newAppNumber = 1;
       if (lastAppointment?.appointmentId && lastAppointment.appointmentId.startsWith('APT-')) {
@@ -218,6 +219,8 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
         purpose: purpose.trim(),
         scheduledAt,
         status: initialVisitStatus,
+        decidedByName: shouldAutoApprove ? (creator?.name || 'System Auto-Approval') : null,
+        decidedBy: shouldAutoApprove ? (creator?.id || 'system') : null,
       },
       include: {
         visitor: true,
@@ -274,7 +277,7 @@ export const createNewAppointment = async (req: Request, res: Response): Promise
       select: { id: true, role: true },
     });
 
-    if (visitorUser) {
+    if (visitorUser && shouldAutoApprove) {
       await NotificationService.sendNotification({
         type: 'APPOINTMENT_APPROVED',
         title: 'Visit Approved',

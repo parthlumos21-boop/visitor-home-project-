@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { Role } from '@prisma/client';
-import { authenticate, requireRole } from '../middleware/auth.middleware';
+import { authenticate, requireAnyRole, requireRole } from '../middleware/auth.middleware';
 import { 
   scanQrCode, 
   checkInVisitor, 
@@ -20,9 +20,9 @@ router.get('/dashboard', authenticate, getSecurityDashboardStats);
 router.get('/visits', authenticate, getSecurityVisits);
 
 // Scanning endpoints
-router.post('/scan', scanQrCode);
-router.post('/checkin', checkInVisitor);
-router.post('/checkout', checkOutVisitor);
+router.post('/scan', authenticate, requireAnyRole(Role.SECURITY, Role.SUPER_ADMIN), scanQrCode);
+router.post('/checkin', authenticate, requireAnyRole(Role.SECURITY, Role.SUPER_ADMIN), checkInVisitor);
+router.post('/checkout', authenticate, requireAnyRole(Role.SECURITY, Role.SUPER_ADMIN), checkOutVisitor);
 
 // Management endpoints (Only Super Admin)
 router.use(authenticate, requireRole(Role.SUPER_ADMIN));

@@ -225,11 +225,22 @@ export const getEmployeeVisits = async (req: AuthenticatedRequest, res: Response
           select: { id: true, name: true, email: true, department: true },
         },
       },
-      orderBy: filter === 'recent' ? { createdAt: 'desc' } : { scheduledAt: 'asc' },
       take: 50,
     });
 
-    res.json(visits);
+    const sortedVisits = visits.sort((a, b) => {
+      const aKeval = (a.host?.name?.toLowerCase() === 'keval v shah' || a.visitor?.name?.toLowerCase() === 'keval v shah') ? 1 : 0;
+      const bKeval = (b.host?.name?.toLowerCase() === 'keval v shah' || b.visitor?.name?.toLowerCase() === 'keval v shah') ? 1 : 0;
+      if (aKeval !== bKeval) return bKeval - aKeval;
+      
+      if (filter === 'recent') {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      } else {
+        return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+      }
+    });
+
+    res.json(sortedVisits);
   } catch (error) {
     console.error('getEmployeeVisits error:', error);
     res.status(500).json({ error: 'Failed to fetch employee visits' });

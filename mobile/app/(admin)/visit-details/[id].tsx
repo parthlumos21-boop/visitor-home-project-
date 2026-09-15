@@ -22,7 +22,7 @@ export default function AdminVisitDetails() {
 
   const fetchVisitDetails = async () => {
     try {
-      const data = await getSecurityVisits();
+      const data = await getSecurityVisits(undefined, 'newAppointments');
       const found = data.find((v: any) => v.id === id);
       setVisit(found);
     } catch (err) {

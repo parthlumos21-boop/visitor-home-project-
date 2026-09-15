@@ -3,6 +3,7 @@ import { View, ScrollView, Text, TouchableOpacity, Alert, RefreshControl } from 
 import { ClipboardList, Clock, History, Plus, LogOut, Mail, ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
+import { getMyVisitorStats } from '../../services/visits';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function VisitorDashboard() {
@@ -11,9 +12,28 @@ export default function VisitorDashboard() {
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
 
+  const [stats, setStats] = useState({ totalVisits: 0, appointmentRequests: 0, visitHistory: 0 });
+
+  const loadStats = async () => {
+    try {
+      const data = await getMyVisitorStats();
+      setStats({
+        totalVisits: data?.totalVisits || 0,
+        appointmentRequests: data?.appointmentRequests || 0,
+        visitHistory: data?.visitHistory || 0,
+      });
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // await loadOtherData();
+    await loadStats();
     setRefreshing(false);
   }, []);
 
@@ -84,7 +104,7 @@ export default function VisitorDashboard() {
           </View>
         </View>
         <View className="flex-row items-center">
-          <Text className="text-xl font-bold text-gray-900 mr-2">06</Text>
+          <Text className="text-xl font-bold text-gray-900 mr-2">{String(stats.totalVisits).padStart(2, '0')}</Text>
           <ChevronRight color="#9ca3af" size={20} />
         </View>
       </TouchableOpacity>
@@ -100,7 +120,7 @@ export default function VisitorDashboard() {
           </View>
         </View>
         <View className="flex-row items-center">
-          <Text className="text-xl font-bold text-gray-900 mr-2">02</Text>
+          <Text className="text-xl font-bold text-gray-900 mr-2">{String(stats.appointmentRequests).padStart(2, '0')}</Text>
           <ChevronRight color="#9ca3af" size={20} />
         </View>
       </TouchableOpacity>

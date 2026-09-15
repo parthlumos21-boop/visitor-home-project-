@@ -15,8 +15,8 @@ export default function AppointmentRequests() {
 
   const fetchVisits = async () => {
     try {
-      const data = await getMyVisitorVisits('requests');
-      setVisits(data || []);
+      const res = await getMyVisitorVisits('requests', 1, 1000);
+      setVisits(res.data || []);
     } catch (err) {
       console.error("Error fetching visits:", err);
     } finally {

@@ -5,11 +5,14 @@ import { CheckCircle, User, ScanLine, Building2, Phone, Mail, Clock, Calendar, L
 import api from '../../services/api';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { checkInVisitorApi, checkOutVisitorApi } from '../../services/security';
 
+const formatStoredTime = (dateStr?: string | null) => {
+  if (!dateStr) return null;
+  return new Date(dateStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+};
+
 export default function ScanScreen() {
-  const router = useRouter();
   const { isConnected } = useNetwork();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
@@ -74,17 +77,17 @@ export default function ScanScreen() {
     if (!scanDetails?.visitId) return;
     setActionLoading(true);
     try {
-      await checkInVisitorApi(scanDetails.visitId);
-      Alert.alert('Success', 'Visitor checked in successfully!', [
-        { text: 'View Today', onPress: () => router.replace('/(security)/visitors?filter=todays') },
-      ]);
+      const result = await checkInVisitorApi(scanDetails.visitId);
+      const checkInAt = formatStoredTime(result?.visit?.checkInAt) || new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
       setScanDetails((prev: any) => prev ? {
         ...prev,
         status: 'CHECKED_IN',
+        action: 'ALLOW_CHECK_OUT',
         allowCheckIn: false,
         allowCheckOut: true,
-        checkInAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+        checkInAt,
       } : null);
+      Alert.alert('Checked In', `Visitor checked in at ${checkInAt}.`);
     } catch (err: any) {
       Alert.alert('Error', err?.response?.data?.error || 'Failed to check in visitor');
     } finally {
@@ -96,17 +99,17 @@ export default function ScanScreen() {
     if (!scanDetails?.visitId) return;
     setActionLoading(true);
     try {
-      await checkOutVisitorApi(scanDetails.visitId);
-      Alert.alert('Success', 'Visitor checked out successfully!', [
-        { text: 'View Checked Out', onPress: () => router.replace('/(security)/visitors?filter=checkedOut') },
-      ]);
+      const result = await checkOutVisitorApi(scanDetails.visitId);
+      const checkOutAt = formatStoredTime(result?.visit?.checkOutAt) || new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
       setScanDetails((prev: any) => prev ? {
         ...prev,
         status: 'COMPLETED',
+        action: 'COMPLETED',
         allowCheckIn: false,
         allowCheckOut: false,
-        checkOutAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+        checkOutAt,
       } : null);
+      Alert.alert('Checked Out', `Visitor checked out at ${checkOutAt}.`);
     } catch (err: any) {
       Alert.alert('Error', err?.response?.data?.error || 'Failed to check out visitor');
     } finally {
@@ -205,18 +208,21 @@ export default function ScanScreen() {
                       <View className={`px-3 py-1.5 rounded-full flex-row items-center ${
                         scanDetails.status === 'CHECKED_IN' ? 'bg-blue-100 border border-blue-200' :
                         scanDetails.status === 'COMPLETED' ? 'bg-purple-100 border border-purple-200' :
+                        scanDetails.status === 'EXPIRED' ? 'bg-red-100 border border-red-200' :
                         scanDetails.status === 'APPROVED' ? 'bg-emerald-100 border border-emerald-200' :
                         'bg-amber-100 border border-amber-200'
                       }`}>
                         <CheckCircle color={
                           scanDetails.status === 'CHECKED_IN' ? '#2563eb' :
                           scanDetails.status === 'COMPLETED' ? '#9333ea' :
+                          scanDetails.status === 'EXPIRED' ? '#dc2626' :
                           scanDetails.status === 'APPROVED' ? '#16a34a' :
                           '#d97706'
                         } size={16} />
                         <Text className={`ml-1.5 font-bold text-xs uppercase ${
                           scanDetails.status === 'CHECKED_IN' ? 'text-blue-700' :
                           scanDetails.status === 'COMPLETED' ? 'text-purple-700' :
+                          scanDetails.status === 'EXPIRED' ? 'text-red-700' :
                           scanDetails.status === 'APPROVED' ? 'text-emerald-700' :
                           'text-amber-700'
                         }`}>
@@ -280,10 +286,37 @@ export default function ScanScreen() {
                           <Text className="text-base font-semibold text-gray-800">{scanDetails.purpose}</Text>
                         </View>
                       </View>
+
+                      {scanDetails.checkInAt ? (
+                        <View className="flex-row items-center border-t border-gray-50 pt-3">
+                          <LogIn color="#2563eb" size={18} className="mr-3" />
+                          <View>
+                            <Text className="text-xs text-gray-400 font-medium">Checked In</Text>
+                            <Text className="text-base font-semibold text-blue-700">{scanDetails.checkInAt}</Text>
+                          </View>
+                        </View>
+                      ) : null}
+
+                      {scanDetails.checkOutAt ? (
+                        <View className="flex-row items-center border-t border-gray-50 pt-3">
+                          <LogOut color="#d97706" size={18} className="mr-3" />
+                          <View>
+                            <Text className="text-xs text-gray-400 font-medium">Checked Out</Text>
+                            <Text className="text-base font-semibold text-amber-700">{scanDetails.checkOutAt}</Text>
+                          </View>
+                        </View>
+                      ) : null}
                     </View>
 
                     {/* Action Buttons */}
                     <View className="mt-8 space-y-3">
+                      {scanDetails.status === 'EXPIRED' ? (
+                        <View className="rounded-xl border border-red-200 bg-red-50 p-4">
+                          <Text className="text-center text-base font-bold text-red-700">Expired pass</Text>
+                          <Text className="mt-1 text-center text-sm text-red-600">This QR cannot be used for check-in.</Text>
+                        </View>
+                      ) : null}
+
                       {(scanDetails.allowCheckIn || scanDetails.status === 'APPROVED') && (
                         <TouchableOpacity
                           disabled={actionLoading}

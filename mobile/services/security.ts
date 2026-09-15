@@ -45,8 +45,13 @@ export const getSecurityDashboardStats = async (): Promise<SecurityDashboardStat
   return response.data;
 };
 
-export const getSecurityVisits = async (filter?: string) => {
-  const response = await api.get('/security/visits', { params: filter ? { filter } : undefined });
+export const getSecurityVisits = async (filter?: string, source?: 'visits' | 'newAppointments') => {
+  const response = await api.get('/security/visits', {
+    params: {
+      ...(filter ? { filter } : {}),
+      ...(source === 'newAppointments' ? { source } : {}),
+    },
+  });
   return response.data;
 };
 

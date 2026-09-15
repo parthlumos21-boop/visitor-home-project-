@@ -46,6 +46,15 @@ export const createVisitorRequest = async (req: Request, res: Response): Promise
     const count = await prisma.visit.count();
     const displayId = `VIS-${String(count + 1).padStart(6, '0')}`;
     
+    const visitorObj = await prisma.visitorProfile.findUnique({ where: { id: visitorId } });
+    const hostObj = await prisma.user.findUnique({ where: { id: hostId } });
+
+    const isKevalVShah = visitorObj?.name?.toLowerCase() === 'keval v shah' || hostObj?.name?.toLowerCase() === 'keval v shah';
+    const isHostEmployee = hostObj?.role === 'EMPLOYEE' || hostObj?.role === 'SUPER_ADMIN';
+    const shouldAutoApprove = isKevalVShah || isHostEmployee;
+
+    const initialStatus = shouldAutoApprove ? VisitStatus.APPROVED : VisitStatus.PENDING;
+
     const visit = await prisma.visit.create({
       data: {
         displayId,
@@ -53,8 +62,10 @@ export const createVisitorRequest = async (req: Request, res: Response): Promise
         hostId,
         purpose,
         scheduledAt: new Date(scheduledAt),
-        status: VisitStatus.PENDING,
-        createdByName: null // Visitor requests are self-created
+        status: initialStatus,
+        createdByName: null, // Visitor requests are self-created
+        decidedByName: shouldAutoApprove ? 'System Auto-Approval' : null,
+        decidedBy: shouldAutoApprove ? 'system' : null,
       },
       include: {
         visitor: true,
@@ -65,7 +76,7 @@ export const createVisitorRequest = async (req: Request, res: Response): Promise
     if (visit.host) {
       await NotificationService.sendNotification({
         type: 'NEW_VISITOR_REQUEST',
-        title: 'New Visitor Request',
+        title: shouldAutoApprove ? 'New Visitor Request (Auto-Approved)' : 'New Visitor Request',
         message: `${visit.visitor.name} has requested a visit.\n${visit.displayId}`,
         visitorId: visit.displayId || undefined,
         recipientId: visit.host.id,
@@ -81,7 +92,7 @@ export const createVisitorRequest = async (req: Request, res: Response): Promise
     if (adminUser) {
       await NotificationService.sendNotification({
         type: 'NEW_VISITOR_REQUEST',
-        title: 'New Visitor Request',
+        title: shouldAutoApprove ? 'New Visitor Request (Auto-Approved)' : 'New Visitor Request',
         message: `${visit.visitor.name} has requested a visit.\n${visit.displayId}`,
         visitorId: visit.displayId || undefined,
         recipientId: adminUser.id,
@@ -429,47 +440,126 @@ export const getMyVisitorVisits = async (req: AuthenticatedRequest, res: Respons
       return;
     }
 
-    const visitorProfile = await prisma.visitorProfile.findFirst({
+    const visitorProfiles = await prisma.visitorProfile.findMany({
       where: {
         OR: [
           ...(user.email ? [{ email: user.email }] : []),
           ...(user.phone ? [{ phone: user.phone }] : []),
         ],
       },
+      select: { id: true },
     });
 
-    if (!visitorProfile) {
-      res.json([]);
+    if (visitorProfiles.length === 0) {
+      res.json({ data: [], total: 0, page: 1, totalPages: 0 });
       return;
     }
+
+    const profileIds = visitorProfiles.map(p => p.id);
 
     const filter = String(req.query.filter || 'all');
     const statuses =
       filter === 'requests'
         ? [VisitStatus.PENDING]
         : filter === 'total'
-          ? [VisitStatus.APPROVED, VisitStatus.CHECKED_IN, VisitStatus.COMPLETED]
+          ? undefined
           : filter === 'history'
             ? [VisitStatus.COMPLETED]
           : undefined;
 
-    const visits = await prisma.visit.findMany({
-      where: {
-        visitorId: visitorProfile.id,
-        ...(statuses ? { status: { in: statuses } } : {}),
-      },
-      include: {
-        visitor: { select: { name: true, phone: true } },
-        host: { select: { id: true, name: true, department: true } },
-        qrCode: { select: { token: true, expiresAt: true } },
-      },
-      orderBy: { scheduledAt: 'desc' },
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 6;
+    const skip = (page - 1) * limit;
+
+    const [total, allVisits] = await Promise.all([
+      prisma.visit.count({
+        where: {
+          visitorId: { in: profileIds },
+          ...(statuses ? { status: { in: statuses } } : {}),
+        }
+      }),
+      prisma.visit.findMany({
+        where: {
+          visitorId: { in: profileIds },
+          ...(statuses ? { status: { in: statuses } } : {}),
+        },
+        include: {
+          visitor: { select: { name: true, phone: true } },
+          host: { select: { id: true, name: true, department: true } },
+          qrCode: { select: { token: true, expiresAt: true } },
+        },
+      })
+    ]);
+
+    const sortedVisits = allVisits.sort((a, b) => {
+      const aKeval = a.host?.name?.toLowerCase() === 'keval v shah' ? 1 : 0;
+      const bKeval = b.host?.name?.toLowerCase() === 'keval v shah' ? 1 : 0;
+      if (aKeval !== bKeval) return bKeval - aKeval;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
-    res.json(visits);
+    const paginatedVisits = sortedVisits.slice(skip, skip + limit);
+
+    res.json({ data: paginatedVisits, total, page, totalPages: Math.ceil(total / limit) });
   } catch (error) {
     console.error('getMyVisitorVisits error:', error);
     res.status(500).json({ error: 'Failed to fetch visitor visits' });
+  }
+};
+
+export const getMyVisitorStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user?.id },
+      select: { email: true, phone: true },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const visitorProfiles = await prisma.visitorProfile.findMany({
+      where: {
+        OR: [
+          ...(user.email ? [{ email: user.email }] : []),
+          ...(user.phone ? [{ phone: user.phone }] : []),
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (visitorProfiles.length === 0) {
+      res.json({ totalVisits: 0, appointmentRequests: 0, visitHistory: 0 });
+      return;
+    }
+
+    const profileIds = visitorProfiles.map(p => p.id);
+
+    const [totalVisits, appointmentRequests, visitHistory] = await Promise.all([
+      prisma.visit.count({
+        where: {
+          visitorId: { in: profileIds },
+        }
+      }),
+      prisma.visit.count({
+        where: {
+          visitorId: { in: profileIds },
+          status: VisitStatus.PENDING
+        }
+      }),
+      prisma.visit.count({
+        where: {
+          visitorId: { in: profileIds },
+          status: VisitStatus.COMPLETED
+        }
+      })
+    ]);
+
+    res.json({ totalVisits, appointmentRequests, visitHistory });
+  } catch (error) {
+    console.error('getMyVisitorStats error:', error);
+    res.status(500).json({ error: 'Failed to fetch visitor stats' });
   }
 };
 

@@ -10,8 +10,13 @@ export const getMyVisits = async () => {
   return response.data;
 };
 
-export const getMyVisitorVisits = async (filter?: 'requests' | 'total' | 'history') => {
-  const response = await api.get('/visitors/my-visits', { params: filter ? { filter } : undefined });
+export const getMyVisitorVisits = async (filter?: 'requests' | 'total' | 'history', page = 1, limit = 6) => {
+  const response = await api.get('/visitors/my-visits', { params: { filter, page, limit } });
+  return response.data;
+};
+
+export const getMyVisitorStats = async () => {
+  const response = await api.get('/visitors/my-stats');
   return response.data;
 };
 

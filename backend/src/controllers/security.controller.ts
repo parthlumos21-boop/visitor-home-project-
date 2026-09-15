@@ -5,6 +5,28 @@ import bcrypt from 'bcryptjs';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { NotificationService } from '../services/notification.service';
 
+const normalizeQrToken = (value: unknown): string => {
+  const raw = (value || '').toString().trim();
+  if (!raw) return '';
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === 'string') return parsed.trim();
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const candidate =
+        (parsed as any).token ||
+        (parsed as any).qrToken ||
+        (parsed as any).visitId ||
+        (parsed as any).displayId ||
+        (parsed as any).appointmentId ||
+        (parsed as any).id;
+      return candidate ? candidate.toString().trim() : raw;
+    }
+  } catch (e) {}
+
+  return raw.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+};
+
 export const scanQrCode = async (req: Request, res: Response): Promise<void> => {
   try {
     const { token } = req.body;
@@ -13,27 +35,10 @@ export const scanQrCode = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    let cleanToken = (token || '').toString().trim();
-    // Strip surrounding quotes/braces that some QR generators or scanners add
-    cleanToken = cleanToken.replace(/^["'{}\s]+|["'}\s]+$/g, '');
+    const cleanToken = normalizeQrToken(token);
     if (!cleanToken) {
       res.status(400).json({ error: 'QR token is invalid' });
       return;
-    }
-
-    if (
-      (cleanToken.startsWith('{') && cleanToken.endsWith('}')) ||
-      (cleanToken.startsWith('[') && cleanToken.endsWith(']')) ||
-      (cleanToken.startsWith('"') && cleanToken.endsWith('"'))
-    ) {
-      try {
-        const parsed = JSON.parse(cleanToken);
-        if (typeof parsed === 'string') {
-          cleanToken = parsed.trim();
-        } else if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-          cleanToken = (parsed as any).token || (parsed as any).displayId || (parsed as any).id || cleanToken;
-        }
-      } catch (e) {}
     }
 
     // 1. Find by QR token
@@ -49,15 +54,12 @@ export const scanQrCode = async (req: Request, res: Response): Promise<void> => 
       },
     });
 
-    if (
+    const isQrExpired = !!(
       qrCode &&
       qrCode.expiresAt &&
       qrCode.expiresAt < new Date() &&
       qrCode.visit?.status !== VisitStatus.CHECKED_IN
-    ) {
-      res.status(400).json({ error: 'EXPIRED PASS - Pass has already been used for check-in' });
-      return;
-    }
+    );
 
     let visit = qrCode?.visit || null;
 
@@ -135,13 +137,22 @@ export const scanQrCode = async (req: Request, res: Response): Promise<void> => 
       date: scheduledDate.toLocaleDateString('en-IN'),
       time: scheduledDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
       purpose: visit.purpose || 'Official Visit',
-      status: visit.status,
+      status: isQrExpired ? VisitStatus.EXPIRED : visit.status,
       checkInAt: visit.checkInAt ? new Date(visit.checkInAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : null,
       checkOutAt: visit.checkOutAt ? new Date(visit.checkOutAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : null,
       durationMinutes: visit.durationMinutes,
-      allowCheckIn: visit.status === VisitStatus.APPROVED && !visit.checkInAt,
+      qrExpired: isQrExpired,
+      allowCheckIn: !isQrExpired && visit.status === VisitStatus.APPROVED && !visit.checkInAt,
       allowCheckOut: visit.status === VisitStatus.CHECKED_IN || (!!visit.checkInAt && !visit.checkOutAt),
     };
+    const action =
+      isQrExpired ? 'EXPIRED_PASS' :
+      details.allowCheckIn ? 'ALLOW_CHECK_IN' :
+      details.allowCheckOut ? 'ALLOW_CHECK_OUT' :
+      visit.status === VisitStatus.PENDING ? 'PENDING_APPROVAL' :
+      visit.status === VisitStatus.EXPIRED ? 'EXPIRED' :
+      visit.status === VisitStatus.COMPLETED ? 'COMPLETED' :
+      `STATUS_${visit.status}`;
 
     // Notify both Employee (Host) and Admin simultaneously when Security scans QR Code
     try {
@@ -169,9 +180,9 @@ export const scanQrCode = async (req: Request, res: Response): Promise<void> => 
     }
 
     res.json({
-      message: visit.status === VisitStatus.APPROVED ? 'ALLOW ENTRY' : `STATUS: ${visit.status}`,
+      message: action,
       visit,
-      details,
+      details: { ...details, action },
     });
   } catch (error) {
     console.error('scanQrCode error:', error);
@@ -209,6 +220,21 @@ export const checkInVisitor = async (req: Request, res: Response): Promise<void>
       res.status(400).json({ error: 'Visit ID is required' });
       return;
     }
+    const existingVisit = await prisma.visit.findUnique({
+      where: { id: visitId },
+      select: { id: true, status: true, checkInAt: true },
+    });
+
+    if (!existingVisit) {
+      res.status(404).json({ error: 'Visit not found' });
+      return;
+    }
+
+    if (existingVisit.status !== VisitStatus.APPROVED || existingVisit.checkInAt) {
+      res.status(400).json({ error: `Cannot check in visitor with status ${existingVisit.status}` });
+      return;
+    }
+
     const visit = await prisma.visit.update({
       where: { id: visitId },
       data: { 
@@ -276,11 +302,21 @@ export const checkOutVisitor = async (req: Request, res: Response): Promise<void
     }
     const existingVisit = await prisma.visit.findUnique({
       where: { id: visitId },
-      select: { checkInAt: true },
+      select: { checkInAt: true, checkOutAt: true, status: true },
     });
 
-    if (!existingVisit?.checkInAt) {
+    if (!existingVisit) {
+      res.status(404).json({ error: 'Visit not found' });
+      return;
+    }
+
+    if (!existingVisit.checkInAt || existingVisit.status !== VisitStatus.CHECKED_IN) {
       res.status(400).json({ error: 'Visitor must be checked in before checkout' });
+      return;
+    }
+
+    if (existingVisit.checkOutAt) {
+      res.status(400).json({ error: 'Visitor is already checked out' });
       return;
     }
 
@@ -484,10 +520,75 @@ export const getSecurityDashboardStats = async (req: AuthenticatedRequest, res: 
 export const getSecurityVisits = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const filter = req.query.filter as string;
+    const source = req.query.source as string;
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
+
+    if (source === 'newAppointments') {
+      let where: any = {};
+
+      if (filter === 'upcoming') {
+        where.status = 'APPROVED';
+      } else if (filter === 'inside') {
+        where.status = 'CHECKED_IN';
+      } else if (filter === 'todays') {
+        where.visitDate = `${String(todayStart.getDate()).padStart(2, '0')}-${String(todayStart.getMonth() + 1).padStart(2, '0')}-${todayStart.getFullYear()}`;
+      } else if (filter === 'checkedOut') {
+        where.status = 'COMPLETED';
+      }
+
+      const appointments = await prisma.newAppointment.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: 1000,
+      });
+
+      const appointmentVisits = appointments.map((appointment) => {
+        const scheduledAt = parseAppointmentDateTime(appointment.visitDate, appointment.arrivalTime) || appointment.createdAt;
+
+        return {
+          id: appointment.id,
+          displayId: appointment.appointmentId,
+          appointmentId: appointment.appointmentId,
+          source: 'NewAppointment',
+          visitor: {
+            name: appointment.fullName,
+            phone: appointment.mobile,
+            email: appointment.email,
+            company: appointment.company,
+            visitorType: appointment.visitorType,
+          },
+          host: {
+            id: appointment.personToMeet,
+            name: appointment.personToMeet,
+            email: null,
+            department: appointment.department,
+          },
+          qrCode: null,
+          purpose: appointment.purpose,
+          scheduledAt,
+          status: appointment.status,
+          createdByName: appointment.decidedByName,
+          decidedByName: appointment.decidedByName,
+          createdAt: appointment.createdAt,
+          updatedAt: appointment.updatedAt,
+          rejectionReason: appointment.rejectionReason,
+          notes: appointment.notes,
+          vehicleNumber: appointment.vehicleNumber,
+        };
+      });
+
+      console.log('[Security Visits]', JSON.stringify({
+        filter: filter || 'all',
+        count: appointmentVisits.length,
+        source: 'public.NewAppointment',
+      }));
+
+      res.json(appointmentVisits);
+      return;
+    }
     
     let where: any = {};
 
@@ -522,14 +623,24 @@ export const getSecurityVisits = async (req: AuthenticatedRequest, res: Response
       orderBy: { createdAt: 'desc' },
       take: 1000,
     });
+    const decoratedVisits = visits.map((visit) => {
+      const qrExpired = !!(
+        visit.qrCode?.expiresAt &&
+        visit.qrCode.expiresAt < new Date() &&
+        visit.status === VisitStatus.APPROVED &&
+        !visit.checkInAt
+      );
+
+      return qrExpired ? { ...visit, status: VisitStatus.EXPIRED, qrExpired: true } : visit;
+    });
 
     console.log('[Security Visits]', JSON.stringify({
       filter: filter || 'all',
-      count: visits.length,
+      count: decoratedVisits.length,
       source: 'postgres',
     }));
 
-    res.json(visits);
+    res.json(decoratedVisits);
   } catch (error) {
     console.error('getSecurityVisits error:', error);
     res.status(500).json({ error: 'Failed to fetch security visits' });

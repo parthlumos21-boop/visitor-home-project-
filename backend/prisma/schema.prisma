@@ -54,6 +54,8 @@ model Visit {
   checkInAt   DateTime?
   checkOutAt  DateTime?
   durationMinutes Int?
+  decidedBy     String?
+  decidedByName String?
   createdAt   DateTime  @default(now())
 
   // Relations

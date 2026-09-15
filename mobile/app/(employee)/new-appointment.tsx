@@ -94,7 +94,7 @@ export default function EmployeeNewAppointment() {
     setArrivalTime('');
   };
 
-  const handleSendInvitation = async () => {
+  const handleCreateAppointment = async () => {
     if (!fullName || !mobileNumber || !visitorType || !purpose || !validFor || !arrivalTime) {
       Alert.alert('Missing Fields', 'Please fill in all required fields marked with *');
       return;
@@ -102,26 +102,31 @@ export default function EmployeeNewAppointment() {
 
     setIsLoading(true);
     try {
-      await createNewAppointment({
+      const { useAuthStore } = require('../../store/authStore');
+      const currentUser = useAuthStore.getState().user;
+      const hostName = currentUser?.name || 'Unknown Host';
+
+      const created = await createNewAppointment({
         fullName: fullName.trim(),
         mobile: mobileNumber.trim(),
         email: emailAddress.trim() || undefined,
         company: companyName.trim() || undefined,
         visitorType,
         purpose,
-        personToMeet: 'Me',
+        personToMeet: hostName,
         visitDate: appointmentDate.toISOString(),
         arrivalTime,
         notes: notes.trim() || undefined,
       });
-      Alert.alert('Success', 'Visit approved and added to the visitor total visits.', [
+      const isApproved = created?.visit?.status === 'APPROVED';
+      Alert.alert('Success', isApproved ? 'Visit approved and added to the visitor process.' : 'Appointment submitted for approval.', [
         {
           text: 'Add Another',
           onPress: resetForm,
         },
         {
-          text: 'Dashboard',
-          onPress: () => router.push('/(employee)/dashboard'),
+          text: isApproved ? 'Visitor Process' : 'Dashboard',
+          onPress: () => router.push(isApproved ? '/(employee)/visitors?filter=recent' : '/(employee)/dashboard'),
         },
       ]);
     } catch (error) {
@@ -185,12 +190,12 @@ export default function EmployeeNewAppointment() {
         <TouchableOpacity onPress={() => router.push('/(employee)/dashboard')} className="mr-3 p-2 -ml-2">
           <ArrowLeft color="#111827" size={24} />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-gray-950 flex-1">Invite Visitor</Text>
+        <Text className="text-xl font-bold text-gray-950 flex-1">New Appointment</Text>
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
         <View className="mb-6">
-          <Text className="text-2xl font-bold text-gray-900 mb-1">Invite a Visitor</Text>
+          <Text className="text-2xl font-bold text-gray-900 mb-1">Create New Appointment</Text>
           <Text className="text-gray-500">Create a new visitor appointment</Text>
         </View>
 
@@ -352,7 +357,7 @@ export default function EmployeeNewAppointment() {
           </TouchableOpacity>
           <CustomButton
             title="Create Appointment"
-            onPress={handleSendInvitation}
+            onPress={handleCreateAppointment}
             isLoading={isLoading}
             className="h-12 min-w-[168px] px-5"
           />

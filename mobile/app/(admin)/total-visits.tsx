@@ -58,7 +58,7 @@ export default function AdminTotalVisits() {
         setLoading(true);
       }
       const selectedFilter = typeof filter === 'string' ? filter : undefined;
-      const data = await getSecurityVisits(selectedFilter);
+      const data = await getSecurityVisits(selectedFilter, 'newAppointments');
       
       setVisits(data || []);
       console.log('[Admin Total Visits]', {

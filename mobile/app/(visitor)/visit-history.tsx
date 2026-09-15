@@ -15,8 +15,8 @@ export default function VisitHistory() {
 
   const fetchVisits = async () => {
     try {
-      const data = await getMyVisitorVisits('history');
-      setVisits(data || []);
+      const res = await getMyVisitorVisits('history', 1, 1000);
+      setVisits(res.data || []);
     } catch (err) {
       console.error("Error fetching visits:", err);
     } finally {

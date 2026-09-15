@@ -172,11 +172,13 @@ export default function SecurityVisitors() {
                   <View className={`px-2.5 py-1 rounded-full ${
                     visit.status === 'CHECKED_IN' ? 'bg-blue-100' :
                     visit.status === 'COMPLETED' ? 'bg-purple-100' :
+                    visit.status === 'EXPIRED' ? 'bg-red-100' :
                     visit.status === 'APPROVED' ? 'bg-emerald-100' : 'bg-amber-100'
                   }`}>
                     <Text className={`text-xs font-bold uppercase ${
                       visit.status === 'CHECKED_IN' ? 'text-blue-700' :
                       visit.status === 'COMPLETED' ? 'text-purple-700' :
+                      visit.status === 'EXPIRED' ? 'text-red-700' :
                       visit.status === 'APPROVED' ? 'text-emerald-700' : 'text-amber-700'
                     }`}>
                       {visit.status}

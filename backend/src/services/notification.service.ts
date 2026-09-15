@@ -237,7 +237,6 @@ export class NotificationService {
   static async notifyHostOfAppointmentApproval(appointment: any) {
     const employeeUser = await prisma.user.findFirst({
       where: {
-        role: Role.EMPLOYEE,
         status: 'ACTIVE',
         OR: [
           { id: appointment.personToMeet },
