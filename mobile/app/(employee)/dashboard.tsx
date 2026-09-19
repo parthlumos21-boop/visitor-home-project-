@@ -105,13 +105,6 @@ export default function EmployeeDashboard() {
       icon: <Clock color="#2563eb" size={22} />,
       onPress: () => router.push('/(employee)/visitors?filter=my'),
     },
-        {
-      title: 'Upcoming Today',
-      value: stats.upcoming,
-      icon: <Users color="#2563eb" size={22} />,
-      onPress: () => router.push('/(employee)/visitors?filter=upcoming'),
-    },
-
   ];
 
     const numColumns = width >= 1024 ? 4 : width >= 768 ? 3 : 2;

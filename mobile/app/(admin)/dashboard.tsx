@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable, useWindowDimensions, RefreshControl, Image } from 'react-native';
-import { Bell, CalendarDays, Clock, LogOut, UserCheck, Users, X, Shield, Plus } from 'lucide-react-native';
+import { Bell, CalendarDays, Clock, LogOut, UserCheck, Users, X, Shield, Plus, ArrowRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAdminDashboard, AdminDashboardStats } from '../../services/admin';
@@ -89,45 +89,27 @@ export default function AdminDashboard() {
     {
       title: 'Total Visits',
       value: stats.totalVisits,
-      icon: <Users color="#2563eb" size={22} />,
+      icon: <Users color="#3b82f6" size={26} />,
       onPress: () => router.push('/(admin)/total-visits'),
-      accent: 'bg-blue-50',
-    },
-    {
-      title: 'Pending Approvals',
-      value: stats.pendingApprovals,
-      icon: <Clock color="#d97706" size={22} />,
-      onPress: () => router.push('/(admin)/approvals'),
-      accent: 'bg-amber-50',
-    },
-    {
-      title: 'Currently Inside',
-      value: stats.currentlyInside,
-      icon: <UserCheck color="#059669" size={22} />,
-      onPress: () => router.push('/(admin)/total-visits?filter=inside'),
-      accent: 'bg-emerald-50',
-    },
-    {
-      title: 'Appointments Today',
-      value: stats.appointmentsToday,
-      icon: <CalendarDays color="#7c3aed" size={22} />,
-      onPress: () => router.push('/(admin)/visitors'),
-      accent: 'bg-violet-50',
+      badgeColor: 'bg-blue-600',
+      bgColor: 'bg-blue-50',
     },
     {
       title: 'Total Employees',
       value: stats.totalEmployees || 0,
-      icon: <Users color="#0284c7" size={22} />,
+      icon: <UserCheck color="#3b82f6" size={26} />,
       onPress: () => router.push('/(admin)/employees'),
-      accent: 'bg-sky-50',
+      badgeColor: 'bg-blue-600',
+      bgColor: 'bg-blue-50',
     },
-      {
-        title: 'Total Security',
-        value: stats.totalSecurity || 0,
-        icon: <Shield color="#10b981" size={22} />,
-        onPress: () => router.push('/(admin)/security'),
-        accent: 'bg-emerald-50',
-      },
+    {
+      title: 'Total Security',
+      value: stats.totalSecurity || 0,
+      icon: <Shield color="#3b82f6" size={26} />,
+      onPress: () => router.push('/(admin)/security'),
+      badgeColor: 'bg-blue-600',
+      bgColor: 'bg-blue-50',
+    },
   ];
 
   const numColumns = width >= 1024 ? 4 : width >= 768 ? 3 : 2;
@@ -138,35 +120,43 @@ export default function AdminDashboard() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <View className="bg-white border-b border-gray-200 px-4 pb-3" style={{ paddingTop: insets.top + 16 }}>
+      <View className="bg-white border-b border-gray-100 px-4 pb-4" style={{ paddingTop: insets.top + 16 }}>
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center flex-1">
             <Image
               source={require('../../assets/logo.png')}
-              style={{ width: 64, height: 64, marginRight: 10 }}
+              style={{ width: 56, height: 56 }}
               resizeMode="contain"
             />
-            <Text className="text-lg font-bold text-gray-950">Admin</Text>
+            <View className="w-[1px] h-10 bg-gray-300 mx-3" />
+            <View className="flex-col">
+              <Text className="text-2xl font-extrabold text-gray-900 leading-tight">Admin</Text>
+              <Text className="text-sm font-semibold text-gray-500">System Administrator</Text>
+            </View>
           </View>
-          <TouchableOpacity
-            onPress={handleOpenNotifications}
-            accessibilityRole="button"
-            accessibilityLabel="Open notifications"
-            className="h-11 w-11 items-center justify-center rounded-full bg-gray-100 mr-2"
-            activeOpacity={0.75}
-          >
-            <Bell color="#111827" size={21} />
-          </TouchableOpacity>
+          
+          <View className="flex-row items-center">
+            <TouchableOpacity
+              onPress={handleOpenNotifications}
+              accessibilityRole="button"
+              accessibilityLabel="Open notifications"
+              className="h-10 w-10 items-center justify-center rounded-full bg-blue-50 mr-3"
+              activeOpacity={0.75}
+            >
+              <Bell color="#1e3a8a" size={20} />
+              <View className="absolute top-2 right-2 h-2.5 w-2.5 bg-blue-600 rounded-full border border-white" />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => setLogoutVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Logout"
-            className="h-11 w-11 items-center justify-center rounded-full bg-red-50"
-            activeOpacity={0.75}
-          >
-            <LogOut color="#dc2626" size={21} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setLogoutVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Logout"
+              className="h-10 w-10 items-center justify-center rounded-full bg-blue-50"
+              activeOpacity={0.75}
+            >
+              <LogOut color="#1e3a8a" size={20} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -175,62 +165,88 @@ export default function AdminDashboard() {
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563eb']} />}
       >
-        <View className="flex-row items-start justify-between gap-3">
-          <View className="min-w-0 flex-1 pr-1">
-            <Text className="text-xl font-bold text-gray-950" numberOfLines={2}>Welcome, {adminName || 'Admin'}</Text>
-            <Text className="mt-1 text-base text-gray-600">Manage visitors and appointments</Text>
+        <View className="flex-row items-center bg-white rounded-xl shadow-sm border-l-4 border-blue-600 p-4 mb-4" style={{ overflow: 'hidden' }}>
+          <View className="flex-1 z-10">
+            <Text className="text-xl font-extrabold text-gray-900 mb-1" numberOfLines={1}>Welcome, {adminName || 'Admin'}</Text>
+            <Text className="text-sm text-gray-500 font-medium">Manage visitors and appointments</Text>
           </View>
-          <TouchableOpacity 
-            onPress={() => router.push('/(admin)/add-visitor')} 
-            className="h-10 shrink-0 flex-row items-center rounded-lg bg-blue-600 px-3 shadow-sm"
-            activeOpacity={0.78}
-          >
-             <Plus color="#ffffff" size={18} />
-             <Text className="ml-1 text-sm font-bold text-white">Appointment</Text>
-          </TouchableOpacity>
+          <View className="flex-row items-center ml-2 z-10">
+            <TouchableOpacity 
+              onPress={() => router.push('/(admin)/add-visitor')} 
+              className="h-9 flex-row items-center rounded-lg bg-blue-600 px-3 shadow-sm"
+              activeOpacity={0.8}
+            >
+               <Plus color="#ffffff" size={16} strokeWidth={3} />
+               <Text className="ml-1 text-xs font-bold text-white">Appointment</Text>
+            </TouchableOpacity>
+          </View>
+          <View className="absolute -right-3 -top-3 opacity-5">
+            <Shield color="#2563eb" size={120} />
+          </View>
         </View>
 
         {isLoading ? (
-          <View className="mt-12 items-center justify-center">
+          <View key="loading" className="mt-12 items-center justify-center">
             <ActivityIndicator size="large" color="#2563eb" />
-            <Text className="mt-3 text-sm text-gray-500">Loading dashboard</Text>
+            <Text className="mt-3 text-sm text-gray-500">Loading dashboard...</Text>
           </View>
         ) : error ? (
-          <View className="mt-8 rounded-lg border border-red-100 bg-red-50 p-4">
+          <View key="error" className="mt-8 rounded-lg border border-red-100 bg-red-50 p-4">
             <Text className="text-base font-semibold text-red-700">{error}</Text>
             <TouchableOpacity onPress={loadDashboard} className="mt-3 h-11 justify-center rounded-md bg-red-600 px-4">
               <Text className="text-center font-semibold text-white">Retry</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View className="mt-6 flex-row flex-wrap" style={{ gap }}>
-            {cards.map((card) => (
-              <TouchableOpacity
-                key={card.title}
-                onPress={card.onPress}
-                accessibilityRole="button"
-                accessibilityLabel={`View ${card.title}`}
-                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm flex-col"
-                style={{ width: cardWidth, minHeight: 140, maxWidth: 220 }}
-                activeOpacity={0.78}
-              >
-                <View className={`mb-3 h-11 w-11 items-center justify-center rounded-lg ${card.accent}`}>
-                  {card.icon}
-                </View>
-                <Text className="text-sm font-semibold leading-5 text-gray-700 mb-2">{card.title}</Text>
-                <View className="flex-1 justify-end">
-                  <View className="flex-row items-end justify-between w-full">
-                    <Text className="text-3xl font-bold text-gray-950" style={{ lineHeight: 36 }}>
-                      {String(card.value).padStart(2, '0')}
-                    </Text>
-                    <Text className="text-sm font-semibold text-blue-700 mb-1">
-                      View -&gt;
-                    </Text>
+          <View key="overview" className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
+            <View className="mb-3">
+              <Text className="text-xl font-bold text-gray-900">Overview</Text>
+            </View>
+            <View className="flex-row items-start justify-between">
+              {cards.map((card) => (
+                <TouchableOpacity
+                  key={card.title}
+                  onPress={card.onPress}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${card.title}`}
+                  className="flex-1 items-center"
+                  activeOpacity={0.8}
+                >
+                  <View className={`w-14 h-14 rounded-2xl items-center justify-center relative ${card.bgColor}`}>
+                    {card.icon}
+                    <View className={`absolute -top-2 -right-2 min-w-5 h-5 rounded-full px-1 items-center justify-center border-2 border-white ${card.badgeColor}`}>
+                      <Text className="text-[10px] font-bold text-white leading-none">
+                        {String(card.value > 99 ? '99+' : card.value)}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <Text className="text-xs font-medium text-gray-700 mt-2 text-center leading-tight flex-shrink">
+                    {card.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
+        )}
+
+        {!isLoading && !error && (
+          <TouchableOpacity 
+            onPress={() => router.push('/(admin)/approvals')}
+            activeOpacity={0.8}
+            className="bg-white rounded-3xl p-4 flex-row items-center shadow-sm border border-gray-100 mb-4"
+          >
+            <View className="w-12 h-12 rounded-full bg-gray-50 items-center justify-center relative mr-4">
+              <Bell color="#4b5563" size={24} />
+              <View className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+            </View>
+            <View className="flex-1 justify-center flex-shrink-1">
+              <Text className="text-base font-bold text-gray-900 mb-0.5" numberOfLines={1}>Pending visiting approvals</Text>
+              <Text className="text-sm text-gray-600" numberOfLines={1}>You have {stats.pendingApprovals} approvals pending!</Text>
+            </View>
+            <View className="ml-2">
+              <Text className="text-sm font-semibold text-blue-600">View All</Text>
+            </View>
+          </TouchableOpacity>
         )}
       </ScrollView>
 

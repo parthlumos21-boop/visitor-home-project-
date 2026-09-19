@@ -20,7 +20,7 @@ export default function AdminTotalVisits() {
   const [currentPage, setCurrentPage] = useState(1);
   const [renewingId, setRenewingId] = useState<string | null>(null);
   const { user } = useAuthStore();
-  const ITEMS_PER_PAGE = 6;
+  const ITEMS_PER_PAGE = 5;
 
   const handleRenew = (visitId: string) => {
     Alert.alert(
@@ -226,11 +226,8 @@ export default function AdminTotalVisits() {
                       {visit.purpose || 'No purpose specified'}
                     </Text>
                   </View>
-                  <View
-                    className="flex-row items-center"
-                  >
-                    <Text className="font-bold text-blue-600 text-xs mr-1">View All Details</Text>
-                    <ArrowRight color="#2563eb" size={14} />
+                  <View className="flex-row items-center">
+                    <Text className="font-bold text-blue-600 text-xs">View All Details</Text>
                   </View>
                 </View>
 
@@ -242,7 +239,7 @@ export default function AdminTotalVisits() {
                         handleRenew(visit.id);
                       }}
                       disabled={renewingId === visit.id}
-                      className={`bg-blue-600 rounded-lg py-1.5 px-3 items-center flex-row justify-center ${renewingId === visit.id ? 'opacity-70' : ''}`}
+                      className={`bg-blue-600 rounded-lg py-1.5 px-3 items-center flex-row justify-center self-center ${renewingId === visit.id ? 'opacity-70' : ''}`}
                     >
                       {renewingId === visit.id && <ActivityIndicator color="#ffffff" size="small" className="mr-2" />}
                       <Text className="text-white font-bold text-xs">{renewingId === visit.id ? 'Renewing...' : 'Renew Appointment'}</Text>
