@@ -1,0 +1,7 @@
+npm error Lifecycle script `dev` failed with error:
+npm error code 1073807364
+npm error path D:\visitor-home-project--main\backend
+npm error workspace backend@1.0.0
+npm error location D:\visitor-home-project--main\backend
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c tsx watch src/app.ts

@@ -1,0 +1,339 @@
+import { Response } from 'express';
+import { Role, VisitStatus } from '@prisma/client';
+import { prisma } from '../app';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
+import { NotificationService } from '../services/notification.service';
+
+const startOfToday = () => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const endOfToday = () => {
+  const date = new Date();
+  date.setHours(23, 59, 59, 999);
+  return date;
+};
+
+const parseVisitDateTime = (visitDate: string, arrivalTime?: string) => {
+  const dateOnly = new Date(visitDate);
+  if (Number.isNaN(dateOnly.getTime())) {
+    return null;
+  }
+
+  const scheduledAt = new Date(dateOnly);
+  scheduledAt.setHours(9, 0, 0, 0);
+
+  const match = arrivalTime?.trim().match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
+  if (match) {
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const period = match[3].toUpperCase();
+
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    scheduledAt.setHours(hours, minutes, 0, 0);
+  }
+
+  return scheduledAt;
+};
+
+const generateDisplayId = async () => {
+  const count = await prisma.visit.count();
+  return `VIS-${String(count + 1).padStart(6, '0')}`;
+};
+
+const endOfVisitDay = (date: Date) => {
+  const expiresAt = new Date(date);
+  expiresAt.setHours(23, 59, 59, 999);
+  return expiresAt;
+};
+
+const getUniqueConstraintMessage = (error: any): string | null => {
+  if (error?.code !== 'P2002') {
+    return null;
+  }
+
+  const fields = Array.isArray(error.meta?.target) ? error.meta.target : [];
+
+  if (fields.includes('phone')) {
+    return 'An employee with this mobile number already exists.';
+  }
+
+  if (fields.includes('email')) {
+    return 'An employee with this email address already exists.';
+  }
+
+  return 'An employee with these details already exists.';
+};
+
+export const getEmployees = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { department } = req.query;
+    const whereClause: any = {
+      role: Role.EMPLOYEE,
+    };
+    if (department) {
+      whereClause.department = String(department);
+    }
+
+    const employees = await (prisma.user as any).findMany({
+      where: whereClause,
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        employeeId: true,
+        name: true,
+        email: true,
+        phone: true,
+        department: true,
+        designation: true,
+        status: true,
+      },
+    });
+    res.json(employees);
+  } catch (error) {
+    console.error('getEmployees error:', error);
+    res.status(500).json({ error: 'Failed to fetch employees' });
+  }
+};
+
+export const getEmployeeById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const employee = await (prisma.user as any).findUnique({
+      where: { id: req.params.id as string, role: Role.EMPLOYEE },
+      select: {
+        id: true,
+        employeeId: true,
+        name: true,
+        email: true,
+        phone: true,
+        department: true,
+        designation: true,
+        status: true,
+      } as any,
+    });
+
+    if (!employee) {
+      res.status(404).json({ error: 'Employee not found' });
+      return;
+    }
+
+    // Get visitor activity
+    const activity = {
+      totalAppointments: 0,
+      approved: 0,
+      rejected: 0,
+      completed: 0
+    };
+
+    const hostVisits = await (prisma.visit as any).findMany({
+      where: { hostId: employee.id }
+    });
+
+    activity.totalAppointments = hostVisits.length;
+    activity.approved = hostVisits.filter((v: any) => v.status === 'APPROVED' || v.status === 'CHECKED_IN' || v.status === 'COMPLETED').length;
+    activity.rejected = hostVisits.filter((v: any) => v.status === 'REJECTED').length;
+    activity.completed = hostVisits.filter((v: any) => v.status === 'COMPLETED').length;
+
+    res.json({ ...employee, activity });
+  } catch (error) {
+    console.error('getEmployeeById error:', error);
+    res.status(500).json({ error: 'Failed to fetch employee details' });
+  }
+};
+
+export const getEmployeeDashboard = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const hostId = req.user?.id;
+    if (!hostId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const todayStart = startOfToday();
+    const todayEnd = endOfToday();
+
+        const [myVisitors, newVisitors, upcoming, inside, recent] = await Promise.all([
+      prisma.visit.findMany({
+        where: { hostId },
+        distinct: ['visitorId'],
+        select: { visitorId: true },
+      }),
+      prisma.visit.count({
+        where: { hostId },
+      }),
+      prisma.visit.count({
+        where: {
+          hostId,
+          scheduledAt: { gte: todayStart, lte: todayEnd },
+          status: { in: [VisitStatus.PENDING, VisitStatus.APPROVED] },
+        },
+      }),
+      prisma.visit.count({
+        where: {
+          hostId,
+          status: VisitStatus.CHECKED_IN,
+          checkInAt: { not: null },
+          checkOutAt: null,
+        },
+      }),
+      prisma.visit.count({
+        where: { hostId },
+      }),
+    ]);
+    res.json({ myVisitors: myVisitors.length, newVisitors, upcoming, inside, recent });
+  } catch (error) {
+    console.error('getEmployeeDashboard error:', error);
+    res.status(500).json({ error: 'Failed to fetch employee dashboard' });
+  }
+};
+
+export const getEmployeeVisits = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const hostId = req.user?.id;
+    if (!hostId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const filter = String(req.query.filter || 'recent');
+    const todayStart = startOfToday();
+    const todayEnd = endOfToday();
+    const where: any = { hostId };
+
+        if (filter === 'upcoming') {
+      where.status = { in: [VisitStatus.PENDING, VisitStatus.APPROVED] };
+      where.scheduledAt = { gte: todayStart, lte: todayEnd };
+    } else if (filter === 'inside') {
+      where.status = VisitStatus.CHECKED_IN;
+      where.checkInAt = { not: null };
+      where.checkOutAt = null;
+    } else if (filter === 'sent') {
+      delete where.hostId;
+      where.createdBy = hostId;
+    }
+
+    const visits = await prisma.visit.findMany({
+      where,
+      include: {
+        visitor: true,
+        host: {
+          select: { id: true, name: true, email: true, department: true },
+        },
+      },
+      take: 50,
+    });
+
+    const sortedVisits = visits.sort((a, b) => {
+      const aKeval = (a.host?.name?.toLowerCase() === 'keval v shah' || a.visitor?.name?.toLowerCase() === 'keval v shah') ? 1 : 0;
+      const bKeval = (b.host?.name?.toLowerCase() === 'keval v shah' || b.visitor?.name?.toLowerCase() === 'keval v shah') ? 1 : 0;
+      if (aKeval !== bKeval) return bKeval - aKeval;
+      
+      if (filter === 'recent') {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      } else {
+        return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+      }
+    });
+
+    res.json(sortedVisits);
+  } catch (error) {
+    console.error('getEmployeeVisits error:', error);
+    res.status(500).json({ error: 'Failed to fetch employee visits' });
+  }
+};
+
+
+
+export const createEmployee = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { name, employeeId, phone, email, password, department, designation, role, status } = req.body;
+
+    if (typeof password !== 'string' || password.trim().length < 6) {
+      res.status(400).json({ error: 'Password must be at least 6 characters.' });
+      return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password.trim(), salt);
+
+    const newEmployee = await (prisma.user as any).create({
+      data: {
+        name,
+        employeeId,
+        phone,
+        email,
+        passwordHash,
+        role: role as Role || Role.EMPLOYEE,
+        department,
+        designation,
+        status: status || 'ACTIVE',
+      }
+    });
+
+    res.status(201).json({ id: newEmployee.id, message: 'Employee created successfully' });
+  } catch (error: any) {
+    console.error('createEmployee error:', error);
+    const uniqueConstraintMessage = getUniqueConstraintMessage(error);
+    if (uniqueConstraintMessage) {
+      res.status(400).json({ error: uniqueConstraintMessage });
+      return;
+    }
+
+    res.status(500).json({ error: 'Failed to create employee' });
+  }
+};
+
+export const updateEmployee = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { name, employeeId, phone, email, department, designation, role, status } = req.body;
+    
+    await (prisma.user as any).update({
+      where: { id: req.params.id as string },
+      data: {
+        name,
+        employeeId,
+        phone,
+        email,
+        role: role as Role,
+        department,
+        designation,
+        status,
+      }
+    });
+
+    res.json({ message: 'Employee updated successfully' });
+  } catch (error: any) {
+    console.error('updateEmployee error:', error);
+    const uniqueConstraintMessage = getUniqueConstraintMessage(error);
+    if (uniqueConstraintMessage) {
+      res.status(400).json({ error: uniqueConstraintMessage });
+      return;
+    }
+
+    res.status(500).json({ error: 'Failed to update employee' });
+  }
+};
+
+export const deactivateEmployee = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    await (prisma.user as any).update({
+      where: { id: req.params.id as string },
+      data: { status: 'INACTIVE' }
+    });
+    res.json({ message: 'Employee deactivated successfully' });
+  } catch (error) {
+    console.error('deactivateEmployee error:', error);
+    res.status(500).json({ error: 'Failed to deactivate employee' });
+  }
+};
+
+
+
+
+
+

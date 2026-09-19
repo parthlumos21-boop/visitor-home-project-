@@ -1,0 +1,146 @@
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, ScrollView, Text, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { ClipboardList, Clock, History, Plus, LogOut, Mail, ChevronRight } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { useAuthStore } from '../../store/authStore';
+import { getMyVisitorStats } from '../../services/visits';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+export default function VisitorDashboard() {
+  const router = useRouter();
+  const { user, clearAuth } = useAuthStore();
+  const insets = useSafeAreaInsets();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [stats, setStats] = useState({ totalVisits: 0, appointmentRequests: 0, visitHistory: 0 });
+
+  const loadStats = async () => {
+    try {
+      const data = await getMyVisitorStats();
+      setStats({
+        totalVisits: data?.totalVisits || 0,
+        appointmentRequests: data?.appointmentRequests || 0,
+        visitHistory: data?.visitHistory || 0,
+      });
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadStats();
+    setRefreshing(false);
+  }, []);
+
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Logout", style: "destructive", onPress: () => {
+        clearAuth();
+        router.replace('/(auth)/login');
+      }}
+    ]);
+  };
+
+  const handleCardPress = (title: string, routeName: string) => {
+    try {
+      router.push(`/(visitor)/${routeName}`);
+    } catch(err) {
+      console.error(`Error navigating to ${title}:`, err);
+    }
+  };
+
+  return (
+    <ScrollView 
+      className="flex-1 bg-gray-50" 
+      contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16, paddingTop: Math.max(insets.top, 16) + 12 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+      }
+    >
+      <View className="flex-row justify-between items-center mb-6 px-1">
+        <Text className="text-2xl font-black text-gray-950 tracking-tight">Visitor</Text>
+
+        <TouchableOpacity onPress={handleLogout} className="p-3 bg-white rounded-full shadow-sm border border-gray-200">
+          <LogOut color="#dc2626" size={20} />
+        </TouchableOpacity>
+      </View>
+
+      <View className="items-end mb-2">
+        <TouchableOpacity 
+          onPress={() => router.push('/(visitor)/new-registration')}
+          className="bg-blue-600 px-4 py-2 rounded-lg shadow-sm flex-row items-center"
+          activeOpacity={0.8}
+        >
+          <Plus color="#ffffff" size={16} className="mr-1" />
+          <Text className="text-white font-bold text-sm">New</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+        <Text className="text-xl font-bold text-gray-900 mb-1">Welcome, {user?.name || 'Visitor'}</Text>
+        <Text className="text-xs text-gray-500 mb-3">Your Visitor Dashboard</Text>
+      </View>
+
+      
+
+      <Text className="text-gray-500 font-bold mb-4 ml-1 mt-2">YOUR VISIT OVERVIEW</Text>
+
+
+
+      <TouchableOpacity onPress={() => handleCardPress('Total Visits', 'total-visits')} className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 active:opacity-70 flex-row items-center justify-between">
+        <View className="flex-row items-center flex-1">
+          <View className="bg-blue-50 p-3 rounded-full mr-4">
+            <ClipboardList color="#3b82f6" size={24} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-gray-900 font-bold mb-1">TOTAL VISITS</Text>
+            <Text className="text-gray-500 text-xs">View all your visits</Text>
+          </View>
+        </View>
+        <View className="flex-row items-center">
+          <Text className="text-xl font-bold text-gray-900 mr-2">{String(stats.totalVisits).padStart(2, '0')}</Text>
+          <ChevronRight color="#9ca3af" size={20} />
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => handleCardPress('Appointment Requests', 'appointment-requests')} className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 active:opacity-70 flex-row items-center justify-between">
+        <View className="flex-row items-center flex-1">
+          <View className="bg-amber-50 p-3 rounded-full mr-4">
+            <Clock color="#f59e0b" size={24} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-gray-900 font-bold mb-1">APPOINTMENT REQUESTS</Text>
+            <Text className="text-gray-500 text-xs">Waiting for confirmation</Text>
+          </View>
+        </View>
+        <View className="flex-row items-center">
+          <Text className="text-xl font-bold text-gray-900 mr-2">{String(stats.appointmentRequests).padStart(2, '0')}</Text>
+          <ChevronRight color="#9ca3af" size={20} />
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => handleCardPress('Visit History', 'visit-history')} className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 active:opacity-70 flex-row items-center justify-between">
+        <View className="flex-row items-center flex-1">
+          <View className="bg-emerald-50 p-3 rounded-full mr-4">
+            <History color="#10b981" size={24} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-gray-900 font-bold mb-1">VISIT HISTORY</Text>
+            <Text className="text-gray-500 text-xs">View your previous visits</Text>
+          </View>
+        </View>
+        <View className="flex-row items-center">
+          <Text className="text-sm font-bold text-blue-600 mr-2">VIEW ALL</Text>
+          <ChevronRight color="#9ca3af" size={20} />
+        </View>
+      </TouchableOpacity>
+
+    </ScrollView>
+  );
+}

@@ -1,0 +1,12 @@
+# Ignore massive mobile crash logs and compressed archives
+*.log
+*.txt
+*.gz
+
+# Ignore heavy mobile folders
+node_modules/
+.expo/
+android/
+ios/
+dist/
+web-build/

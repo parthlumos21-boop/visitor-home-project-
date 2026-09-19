@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "58af7df8-b5c1-471f-8ce3-35506c1ff79a"
+      }
+    },
+    "owner": "saaho123",
+    "android": {
+      "package": "com.saaho123.visitorsystem"
+    }
+  }
+}

@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  employeeId    String?
+  name          String
+  phone         String?   @unique
+  email         String    @unique
+  passwordHash  String
+  role          Role      
+  department    String?
+  designation   String?
+  status        String    @default("ACTIVE")
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  visitsHosted  Visit[]   @relation("HostVisits")
+  pushTokens    PushToken[]
+}
+
+model VisitorProfile {
+  id          String   @id @default(uuid())
+  name        String
+  phone       String
+  email       String?
+  photoUrl    String?
+  idType      String?
+  idNumber    String?
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  visits      Visit[]
+
+  @@index([phone])
+  @@index([email])
+}
+
+model Visit {
+  id          String    @id @default(uuid())
+  displayId   String?   @unique
+  visitorId   String
+  hostId      String
+  createdBy   String?   
+  createdByName String?
+  purpose     String
+  scheduledAt DateTime
+  status      VisitStatus 
+  checkInAt   DateTime?
+  checkOutAt  DateTime?
+  durationMinutes Int?
+  decidedBy     String?
+  decidedByName String?
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  visitor     VisitorProfile @relation(fields: [visitorId], references: [id])
+  host        User           @relation("HostVisits", fields: [hostId], references: [id])
+  qrCode      QrCode?
+}
+
+model QrCode {
+  id        String    @id @default(uuid())
+  visitId   String    @unique
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  
+  // Relations
+  visit     Visit     @relation(fields: [visitId], references: [id])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  event     String
+  screen    String?
+  action    String?
+  method    String?
+  url       String?
+  status    String?
+  message   String?
+  userEmail String?
+  userRole  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model NewAppointment {
+  id            String   @id @default(uuid())
+  appointmentId String  @unique
+  fullName      String
+  mobile        String
+  email         String?
+  company       String?
+  visitorType   String?
+  purpose       String
+  personToMeet  String
+  department    String?
+  visitDate     String
+  arrivalTime   String?
+  vehicleNumber String?
+  notes         String?
+  status        String   @default("REGISTERED")
+  rejectionReason String?
+  decidedAt     DateTime?
+  decidedBy     String?
+  decidedByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([mobile])
+  @@index([status])
+}
+
+model Notification {
+  id            String   @id @default(uuid())
+  recipientId   String?  
+  recipientRole String?  
+  type          String   
+  title         String
+  message       String
+  visitorId     String?
+  visitId       String?
+  targetScreen  String?
+  data          Json?
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([recipientId])
+  @@index([recipientRole])
+  @@index([createdAt])
+}
+
+model PushToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  platform  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+
+enum Role {
+  SUPER_ADMIN
+  SECURITY
+  RECEPTIONIST
+  EMPLOYEE
+  VISITOR
+}
+
+enum VisitStatus {
+  PENDING
+  APPROVED
+  CHECKED_IN
+  COMPLETED
+  REJECTED
+  EXPIRED
+  RENEWED
+}
+
