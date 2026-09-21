@@ -15,6 +15,11 @@ import QRCode from 'react-native-qrcode-svg';
 import { getNewAppointments } from '../../services/appointments';
 import { getApiErrorMessage } from '../../services/errorMessage';
 
+const toTitleCase = (str: string) => {
+  if (!str) return '';
+  return str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+};
+
 export default function VisitorsScreen() {
   const router = useRouter();
   const [visitors, setVisitors] = useState<any[]>([]);
@@ -39,17 +44,29 @@ export default function VisitorsScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <View className="bg-white px-4 pt-14 pb-4 border-b border-gray-200">
+      <View className="bg-white px-4 pt-14 pb-4 border-b border-gray-200 flex-row justify-between items-center">
         <Text className="text-xl font-bold text-gray-950">Visitors</Text>
-        <TouchableOpacity
-          onPress={() => router.push('/(admin)/add-visitor')}
-          className="mt-4 h-12 flex-row items-center justify-center rounded-md bg-blue-600"
-          activeOpacity={0.78}
+        <TouchableOpacity 
+          onPress={() => router.push('/(admin)/add-visitor')} 
+          className="w-10 h-10 items-center justify-center"
         >
-          <Plus color="#ffffff" size={20} />
-          <Text className="ml-2 font-bold text-white">New Appointment</Text>
+          <Plus color="#2563eb" size={26} />
         </TouchableOpacity>
       </View>
+
+      {!loading && visitors.length > 0 && (
+        <View className="px-4 py-4 bg-gray-50 border-b border-gray-100">
+          <View className="bg-white rounded-3xl p-5 shadow-sm border border-gray-200">
+            <Text className="text-sm font-semibold text-blue-500 mb-1">Total:</Text>
+            <Text className="text-4xl font-extrabold text-blue-600 mb-3">{visitors.length}</Text>
+            <View className="flex-row items-center">
+              <Text className="text-sm font-semibold text-blue-600">Approved: {visitors.filter(v => v.status === 'APPROVED').length}</Text>
+              <Text className="text-sm font-semibold text-blue-300 mx-2">|</Text>
+              <Text className="text-sm font-semibold text-blue-600">Pending: {visitors.filter(v => v.status === 'PENDING').length}</Text>
+            </View>
+          </View>
+        </View>
+      )}
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
@@ -63,27 +80,26 @@ export default function VisitorsScreen() {
           ) : (
             visitors.map((visitor) => (
               <View key={visitor.id} className="mb-4 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-                <View className="flex-row items-center p-3 border-b border-gray-100 bg-gray-50">
-                  <View className="mr-2 h-7 w-7 items-center justify-center rounded bg-blue-100">
-                    <User color="#2563eb" size={16} />
+                <View className="flex-row items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
+                  <View className="flex-row items-center">
+                    <View className="mr-2 h-7 w-7 items-center justify-center rounded-full bg-blue-100">
+                      <User color="#2563eb" size={16} />
+                    </View>
+                    <Text className="font-bold text-gray-900 text-sm">
+                      Visitor details
+                    </Text>
                   </View>
-                  <Text className="font-bold text-gray-900 text-sm">
-                    Visitor details
+                  <Text className={`font-bold text-xs tracking-wide ${
+                    visitor.status === 'REJECTED' ? 'text-red-700' : visitor.status === 'APPROVED' ? 'text-emerald-700' : 'text-blue-700'
+                  }`}>
+                    {toTitleCase(visitor.status)}
                   </Text>
                 </View>
                 
                 <View className="p-4">
-                  <View className="flex-row justify-between items-center mb-4">
-                    <Text className="font-bold text-gray-900 text-lg">{visitor.fullName}</Text>
-                    <Text className={`font-bold text-sm tracking-wider ${
-                      visitor.status === 'REJECTED' ? 'text-red-700' : visitor.status === 'APPROVED' ? 'text-emerald-700' : 'text-blue-700'
-                    }`}>
-                      [ {visitor.status} ]
-                    </Text>
-                  </View>
-
-                  <View className="flex-row items-start">
-                    <View className="min-w-0 flex-1 pr-3">
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-1 pr-3">
+                      <Text className="font-bold text-gray-900 text-lg mb-1" numberOfLines={1}>{visitor.fullName}</Text>
                       <Text className="text-sm text-gray-500 mb-1">{visitor.company || 'No company provided'}</Text>
                       <Text className="text-sm text-gray-700 mb-1">{visitor.mobile}</Text>
                       <Text className="text-sm text-gray-700">Meeting: {visitor.personToMeet}</Text>
@@ -92,12 +108,12 @@ export default function VisitorsScreen() {
                     <TouchableOpacity
                       accessibilityRole="button"
                       accessibilityLabel={`View details for ${visitor.fullName}`}
-                      className="w-[112px] items-center"
+                      className="items-center justify-center"
                       activeOpacity={0.78}
                       onPress={() => setDetailsVisitor(visitor)}
                     >
                       <View className="rounded-lg border border-gray-100 bg-white p-2 shadow-sm">
-                        <QRCode value={visitor.id || 'N/A'} size={92} />
+                        <QRCode value={visitor.id || 'N/A'} size={80} />
                       </View>
                     </TouchableOpacity>
                   </View>

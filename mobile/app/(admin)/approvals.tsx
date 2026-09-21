@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { CalendarDays, Check, Clock, Eye, Hourglass, User, X, ChevronRight } from 'lucide-react-native';
+import { CalendarDays, Check, Clock, Eye, Hourglass, User, X, ChevronRight, Building2, Target, UserCheck, CircleDashed } from 'lucide-react-native';
 import { useLocalSearchParams } from 'expo-router';
 import {
   approveNewAppointment,
@@ -193,11 +193,12 @@ export default function ApprovalsScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <View className="bg-white px-4 pt-14 pb-2 border-b border-gray-200">
+      <View className="bg-white px-4 pt-14 pb-4 border-b border-gray-200">
         <Text className="text-xl font-bold text-gray-950">Visitor Approval Request</Text>
-        <Text className="mt-1 text-sm text-gray-500">Manage appointment requests</Text>
+      </View>
 
-        <View className="mt-4 flex-row rounded-lg bg-gray-100 p-1">
+      <View className="bg-white px-4 py-3 border-b border-gray-200">
+        <View className="flex-row rounded-lg bg-gray-100 p-1">
           <TouchableOpacity
             className="flex-1 items-center justify-center rounded-md py-2"
             style={activeTab === 'PENDING' ? { backgroundColor: 'white', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 } : undefined}
@@ -213,6 +214,10 @@ export default function ApprovalsScreen() {
             <Text className="font-semibold" style={{ color: activeTab === 'APPROVED' ? '#059669' : '#4b5563' }}>Approved ({approvedAppointments.length})</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      <View className="px-4 pt-4 pb-1">
+        <Text className="text-lg font-bold text-gray-900">Visitor Requests</Text>
       </View>
 
       {loading ? (
@@ -278,32 +283,39 @@ export default function ApprovalsScreen() {
 
                   <View className="mb-4">
                     <View className="mb-2 flex-row items-center">
-                      <Text className="text-base text-gray-700 w-32">👤 Visitor Name:</Text>
+                      <View className="w-6 items-center justify-center mr-2"><User color="#2563eb" size={18} /></View>
+                      <Text className="text-base text-gray-700 w-28">Visitor Name:</Text>
                       <Text className="flex-1 text-base font-semibold text-gray-950">{appointment.fullName}</Text>
                     </View>
                     <View className="mb-2 flex-row items-center">
-                      <Text className="text-base text-gray-700 w-32">🏢 Company:</Text>
+                      <View className="w-6 items-center justify-center mr-2"><Building2 color="#2563eb" size={18} /></View>
+                      <Text className="text-base text-gray-700 w-28">Company:</Text>
                       <Text className="flex-1 text-base font-semibold text-gray-950">{appointment.company || 'N/A'}</Text>
                     </View>
                     <View className="mb-2 flex-row items-center">
-                      <Text className="text-base text-gray-700 w-32">🎯 Purpose:</Text>
+                      <View className="w-6 items-center justify-center mr-2"><Target color="#2563eb" size={18} /></View>
+                      <Text className="text-base text-gray-700 w-28">Purpose:</Text>
                       <Text className="flex-1 text-base font-semibold text-gray-950">{appointment.purpose}</Text>
                     </View>
                     <View className="mb-2 flex-row items-center">
-                      <Text className="text-base text-gray-700 w-32">👨‍💼 Meet With:</Text>
+                      <View className="w-6 items-center justify-center mr-2"><UserCheck color="#2563eb" size={18} /></View>
+                      <Text className="text-base text-gray-700 w-28">Meet With:</Text>
                       <Text className="flex-1 text-base font-semibold text-gray-950">{appointment.personToMeet}</Text>
                     </View>
                     <View className="mb-2 flex-row items-center">
-                      <Text className="text-base text-gray-700 w-32">📅 Date:</Text>
+                      <View className="w-6 items-center justify-center mr-2"><CalendarDays color="#2563eb" size={18} /></View>
+                      <Text className="text-base text-gray-700 w-28">Date:</Text>
                       <Text className="flex-1 text-base font-semibold text-gray-950">{formatDateLabel(appointment.visitDate)}</Text>
                     </View>
                     <View className="mb-2 flex-row items-center">
-                      <Text className="text-base text-gray-700 w-32">⏰ Time:</Text>
+                      <View className="w-6 items-center justify-center mr-2"><Clock color="#2563eb" size={18} /></View>
+                      <Text className="text-base text-gray-700 w-28">Time:</Text>
                       <Text className="flex-1 text-base font-semibold text-gray-950">{appointment.arrivalTime || 'TBD'}</Text>
                     </View>
                     <View className="mb-2 flex-row items-center">
-                      <Text className="text-base text-gray-700 w-32">Status:</Text>
-                      <Text className="flex-1 text-base font-bold text-amber-500">🟡 Pending</Text>
+                      <View className="w-6 items-center justify-center mr-2"><CircleDashed color="#2563eb" size={18} /></View>
+                      <Text className="text-base text-gray-700 w-28">Status:</Text>
+                      <Text className="flex-1 text-base font-bold text-amber-500">Pending</Text>
                     </View>
                   </View>
 

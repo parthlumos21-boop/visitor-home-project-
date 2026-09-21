@@ -1,12 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable, useWindowDimensions, RefreshControl, Image } from 'react-native';
-import { Bell, CalendarDays, Clock, LogOut, UserCheck, Users, X, Shield, Plus, ArrowRight } from 'lucide-react-native';
+import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable, useWindowDimensions, RefreshControl, Image, TextInput } from 'react-native';
+import { Bell, CalendarDays, Clock, LogOut, UserCheck, Users, X, Shield, Plus, ArrowRight, User, ChevronRight, Search } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAdminDashboard, AdminDashboardStats } from '../../services/admin';
 import { getNotifications, AppNotification } from '../../services/notifications';
 import { useAuthStore } from '../../store/authStore';
 import { getApiErrorMessage } from '../../services/errorMessage';
+import { getNewAppointments } from '../../services/appointments';
+
+const toTitleCase = (str: string) => {
+  if (!str) return '';
+  return str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+};
 
 const emptyStats: AdminDashboardStats = {
   totalVisits: 0,
@@ -31,6 +37,8 @@ export default function AdminDashboard() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [pendingSearch, setPendingSearch] = useState('');
 
   const loadNotifications = async () => {
     try {
@@ -62,6 +70,8 @@ export default function AdminDashboard() {
         currentlyInside: dashboardStats.currentlyInside,
         source: 'postgres',
       });
+      const appointments = await getNewAppointments();
+      setPendingRequests((appointments || []).filter((a: any) => a.status === 'PENDING'));
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to load dashboard data.'));
     } finally {
@@ -130,7 +140,7 @@ export default function AdminDashboard() {
             />
             <View className="w-[1px] h-10 bg-gray-300 mx-3" />
             <View className="flex-col">
-              <Text className="text-2xl font-extrabold text-gray-900 leading-tight">Admin</Text>
+              <Text className="text-2xl font-extrabold text-gray-900 leading-tight">{adminName}</Text>
               <Text className="text-sm font-semibold text-gray-500">System Administrator</Text>
             </View>
           </View>
@@ -247,6 +257,66 @@ export default function AdminDashboard() {
               <Text className="text-sm font-semibold text-blue-600">View All</Text>
             </View>
           </TouchableOpacity>
+        )}
+
+        {!isLoading && !error && pendingRequests.length > 0 && (
+          <View className="mb-4">
+            <TouchableOpacity 
+              onPress={() => router.push('/(admin)/approvals')}
+              className="flex-row justify-between items-center px-2 mb-3 mt-2"
+              activeOpacity={0.7}
+            >
+              <Text className="text-xs font-bold text-gray-500 tracking-widest">PENDING APPROVALS</Text>
+              <Text className="text-sm font-bold text-blue-600">{pendingRequests.length} Requests</Text>
+            </TouchableOpacity>
+
+            <View className="flex-row items-center bg-white rounded-xl border border-gray-200 px-3 h-12 mb-4 shadow-sm">
+              <Search color="#9ca3af" size={20} />
+              <TextInput
+                className="flex-1 ml-2 text-base text-gray-800"
+                placeholder="Search requests..."
+                value={pendingSearch}
+                onChangeText={setPendingSearch}
+              />
+            </View>
+
+            {pendingRequests.filter(req => 
+              req.fullName?.toLowerCase().includes(pendingSearch.toLowerCase()) ||
+              req.purpose?.toLowerCase().includes(pendingSearch.toLowerCase()) ||
+              req.personToMeet?.toLowerCase().includes(pendingSearch.toLowerCase())
+            ).map(request => {
+              const visitDate = new Date(request.visitDate);
+              const isToday = new Date().toDateString() === visitDate.toDateString();
+              const dateStr = isToday ? 'Today' : visitDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+              return (
+                <TouchableOpacity
+                  key={request.appointmentId}
+                  onPress={() => router.push({ pathname: '/(admin)/approvals', params: { appointmentId: request.appointmentId } })}
+                  className="bg-white rounded-3xl p-4 shadow-sm border border-gray-200 mb-3"
+                  activeOpacity={0.7}
+                >
+                  <View className="flex-row justify-between items-center mb-2">
+                    <View className="flex-row items-center">
+                      <View className="w-10 h-10 rounded-full bg-blue-50 items-center justify-center mr-3 border border-blue-100">
+                        <User color="#2563eb" size={20} />
+                      </View>
+                      <Text className="font-bold text-gray-900 text-[17px]">{request.fullName}</Text>
+                    </View>
+                    <ChevronRight color="#9ca3af" size={20} />
+                  </View>
+                  
+                  <View className="pl-[52px]">
+                    <View className="flex-row items-center mb-1">
+                      <UserCheck color="#6b7280" size={14} className="mr-2" />
+                      <Text className="text-gray-700 text-[14px]">Who meets him? <Text className="font-semibold">{request.personToMeet}</Text></Text>
+                    </View>
+                    <Text className="text-gray-500 text-[13px]">{request.purpose} • {dateStr}, {request.arrivalTime}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         )}
       </ScrollView>
 

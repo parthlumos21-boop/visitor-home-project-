@@ -3,6 +3,7 @@ import { Bell, CheckSquare, Home, Shield, UserCircle, Users } from 'lucide-react
 import { View, Text } from 'react-native';
 import type { ReactNode } from 'react';
 import { useNotifications } from '../../context/NotificationContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const iconBox = (icon: ReactNode) => (
   <View style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
@@ -12,6 +13,9 @@ const iconBox = (icon: ReactNode) => (
 
 export default function AdminLayout() {
   const { unreadCount } = useNotifications();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 12);
+  const tabHeight = 58 + bottomInset;
 
   return (
     <Tabs screenOptions={{
@@ -19,7 +23,7 @@ export default function AdminLayout() {
       tabBarLabelStyle: { fontSize: 11, lineHeight: 13, fontWeight: '600', marginTop: 3, marginBottom: 0 },
       tabBarItemStyle: { height: 50, paddingTop: 2, paddingBottom: 0, alignItems: 'center', justifyContent: 'center' },
       tabBarIconStyle: { marginTop: 2 },
-      tabBarStyle: { height: 70, paddingTop: 7, paddingBottom: 12, borderTopColor: '#e5e7eb' },
+      tabBarStyle: { height: tabHeight, paddingTop: 7, paddingBottom: bottomInset, borderTopColor: '#e5e7eb' },
       tabBarAllowFontScaling: false,
       tabBarLabelPosition: 'below-icon',
       headerShown: false,

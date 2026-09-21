@@ -3,9 +3,13 @@ import type { ReactNode } from 'react';
 import { LayoutDashboard, Users, Bell, User, CheckCircle } from 'lucide-react-native';
 import { View, Text } from 'react-native';
 import { useNotifications } from '../../context/NotificationContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EmployeeLayout() {
   const { unreadCount } = useNotifications();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 12);
+  const tabHeight = 58 + bottomInset;
 
   const iconBox = (icon: ReactNode) => (
     <View style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
@@ -18,9 +22,9 @@ export default function EmployeeLayout() {
       tabBarActiveTintColor: '#2563eb',
       tabBarInactiveTintColor: '#6b7280',
       tabBarStyle: {
-        height: 70,
+        height: tabHeight,
         paddingTop: 7,
-        paddingBottom: 12,
+        paddingBottom: bottomInset,
         borderTopColor: '#e5e7eb',
       },
       tabBarLabelStyle: {

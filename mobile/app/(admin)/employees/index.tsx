@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, Platform, KeyboardAvoidingView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ChevronDown, ChevronLeft, Search, UserCircle, UserRoundPlus } from 'lucide-react-native';
+import { ChevronDown, ChevronLeft, Search, UserCircle, Plus, ChevronRight, Smartphone, Mail, Building2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getEmployees, Employee, createEmployee } from '../../../services/employee';
 
@@ -20,6 +20,7 @@ export default function EmployeeList() {
   const [companyOpen, setCompanyOpen] = useState(false);
   const [departmentOpen, setDepartmentOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [selectedDept, setSelectedDept] = useState(params.department?.toString() || 'All Departments');
   const [form, setForm] = useState({
     name: '',
@@ -109,18 +110,36 @@ export default function EmployeeList() {
       onPress={() => router.push(`/(admin)/employees/${item.id}`)}
       accessibilityRole="button"
       accessibilityLabel={`View details for ${item.name}`}
-      className="flex-row items-center bg-white p-4 mb-3 rounded-lg border border-gray-200"
+      className="bg-white p-4 mb-3 rounded-3xl border border-gray-200"
       activeOpacity={0.75}
     >
-      <View className="w-12 h-12 rounded-full bg-gray-100 items-center justify-center mr-4">
-        <UserCircle color="#6b7280" size={32} />
+      {/* Top Section */}
+      <View className="flex-row items-center pb-3 border-b border-gray-100">
+        <View className="w-14 h-14 rounded-full bg-blue-50 items-center justify-center mr-4">
+          <UserCircle color="#2563eb" size={28} />
+        </View>
+        <View className="flex-1">
+          <Text className="text-[17px] font-semibold text-gray-900" numberOfLines={1}>{item.name}</Text>
+          <Text className="text-[14px] text-gray-500 mt-1">{item.role}</Text>
+        </View>
+        <ChevronRight color="#6b7280" size={22} />
       </View>
-      <View className="flex-1">
-        <Text className="text-base font-bold text-gray-900">{item.name}</Text>
-        <Text className="text-sm text-gray-500 mt-1">{item.role}</Text>
-        <Text className="text-sm text-blue-600 mt-1">{item.department || 'No Department'}</Text>
+
+      {/* Bottom Section */}
+      <View className="pt-3">
+        <View className="flex-row items-center mb-2">
+          <View className="w-6 items-center"><Smartphone color="#6b7280" size={16} /></View>
+          <Text className="text-[14px] text-gray-700 ml-2">{item.phone}</Text>
+        </View>
+        <View className="flex-row items-center mb-2">
+          <View className="w-6 items-center"><Mail color="#6b7280" size={16} /></View>
+          <Text className="text-[14px] text-gray-700 ml-2">{item.email}</Text>
+        </View>
+        <View className="flex-row items-center">
+          <View className="w-6 items-center"><Building2 color="#6b7280" size={16} /></View>
+          <Text className="text-[14px] font-medium text-gray-700 ml-2">{item.department || 'No Department'}</Text>
+        </View>
       </View>
-      <Text className="text-sm font-semibold text-blue-700 ml-3">View</Text>
     </TouchableOpacity>
   );
 
@@ -278,31 +297,9 @@ export default function EmployeeList() {
 
   const renderListHeader = () => (
     <View>
-      <View className="flex-row items-center justify-between mb-4">
-        <View className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex-1 mr-3">
-          <Text className="text-xs text-gray-500 font-semibold">Total Employees</Text>
-          <Text className="text-2xl font-bold text-gray-900 mt-1">{employees.length}</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => setShowAddForm(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Open add employee form"
-          className="bg-blue-50 px-3 h-14 rounded-md flex-row items-center border border-blue-100"
-          activeOpacity={0.75}
-        >
-          <UserRoundPlus color="#2563eb" size={18} />
-          <Text className="text-blue-700 font-semibold ml-1">Add</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View className="flex-row items-center bg-white rounded-lg border border-gray-300 px-3 h-12 mb-4">
-        <Search color="#9ca3af" size={20} />
-        <TextInput
-          className="flex-1 ml-2 text-base text-gray-800"
-          placeholder="Search employee..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+      <View className="bg-white rounded-3xl p-5 shadow-sm border border-gray-200 mb-4">
+        <Text className="text-sm font-semibold text-blue-500 mb-1">Total:</Text>
+        <Text className="text-4xl font-extrabold text-blue-600">{employees.length}</Text>
       </View>
 
       <View className="mb-4">
@@ -336,9 +333,43 @@ export default function EmployeeList() {
             <TouchableOpacity onPress={() => (showAddForm ? closeAddForm() : router.back())} className="mr-3">
               <ChevronLeft color="#111827" size={28} />
             </TouchableOpacity>
-            <Text className="text-xl font-bold text-gray-900">{showAddForm ? 'Add Employee' : 'Employees'}</Text>
+            <View>
+              <Text className="text-[22px] font-bold text-gray-900">{showAddForm ? 'Add Employee' : 'Employees'}</Text>
+            </View>
           </View>
+          {!showAddForm && (
+            <View className="flex-row items-center">
+              <TouchableOpacity 
+                onPress={() => setIsSearchVisible(!isSearchVisible)} 
+                className="w-10 h-10 items-center justify-center mr-1"
+              >
+                <Search color="#6b7280" size={24} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setShowAddForm(true)} 
+                className="w-10 h-10 items-center justify-center"
+              >
+                <Plus color="#2563eb" size={26} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
+
+        {/* Search Bar Dropdown */}
+        {!showAddForm && isSearchVisible && (
+          <View className="px-4 mt-3">
+            <View className="flex-row items-center bg-gray-50 rounded-lg border border-gray-200 px-3 h-11">
+              <Search color="#9ca3af" size={18} />
+              <TextInput
+                className="flex-1 ml-2 text-base text-gray-800"
+                placeholder="Search employee..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+              />
+            </View>
+          </View>
+        )}
       </View>
 
       {showAddForm ? (
