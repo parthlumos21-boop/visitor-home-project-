@@ -1,10 +1,9 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { NetworkProvider } from '../store/NetworkContext';
 import { View, ActivityIndicator, Text } from 'react-native';
 import Toast, { ToastConfig, ToastConfigParams } from 'react-native-toast-message';
-import { Bell } from 'lucide-react-native';
 
 import { NotificationProvider } from '../context/NotificationContext';
 

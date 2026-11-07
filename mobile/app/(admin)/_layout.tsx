@@ -3,7 +3,7 @@ import { Bell, CheckSquare, Home, Shield, UserCircle, Users } from 'lucide-react
 import { View, Text } from 'react-native';
 import type { ReactNode } from 'react';
 import { useNotifications } from '../../context/NotificationContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import CustomBottomTabBar from '../../components/navigation/CustomBottomTabBar';
 
 const iconBox = (icon: ReactNode) => (
   <View style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
@@ -13,26 +13,25 @@ const iconBox = (icon: ReactNode) => (
 
 export default function AdminLayout() {
   const { unreadCount } = useNotifications();
-  const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, 12);
-  const tabHeight = 58 + bottomInset;
 
   return (
-    <Tabs screenOptions={{
-      tabBarActiveTintColor: '#2563eb',
-      tabBarLabelStyle: { fontSize: 11, lineHeight: 13, fontWeight: '600', marginTop: 3, marginBottom: 0 },
-      tabBarItemStyle: { height: 50, paddingTop: 2, paddingBottom: 0, alignItems: 'center', justifyContent: 'center' },
-      tabBarIconStyle: { marginTop: 2 },
-      tabBarStyle: { height: tabHeight, paddingTop: 7, paddingBottom: bottomInset, borderTopColor: '#e5e7eb' },
-      tabBarAllowFontScaling: false,
-      tabBarLabelPosition: 'below-icon',
-      headerShown: false,
-      headerTitleStyle: { fontWeight: 'bold' }
-    }}>
+    <Tabs
+      tabBar={(props) => <CustomBottomTabBar {...props} />}
+      screenOptions={{
+        headerShown: false,
+        sceneStyle: { backgroundColor: '#f9fafb' },
+        tabBarStyle: {
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
+        },
+      }}
+    >
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Dashboard',
+          title: 'Home',
           tabBarIcon: ({ color }) => iconBox(<Home color={color} size={23} />),
         }}
       />
@@ -44,30 +43,10 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="approvals"
-        options={{
-          title: 'Approvals',
-          tabBarIcon: ({ color }) => iconBox(<CheckSquare color={color} size={23} />),
-        }}
-      />
-      <Tabs.Screen
         name="security/index"
         options={{
           title: 'Security',
           tabBarIcon: ({ color }) => iconBox(<Shield color={color} size={23} />),
-        }}
-      />
-      <Tabs.Screen
-        name="employees/index"
-        options={{
-          title: 'Employee',
-          tabBarIcon: ({ color }) => iconBox(<UserCircle color={color} size={23} />),
-        }}
-      />
-      <Tabs.Screen
-        name="employees/[id]"
-        options={{
-          href: null,
         }}
       />
       <Tabs.Screen
@@ -84,6 +63,25 @@ export default function AdminLayout() {
               )}
             </View>
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="employees/index"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => iconBox(<UserCircle color={color} size={23} />),
+        }}
+      />
+      <Tabs.Screen
+        name="approvals"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="employees/[id]"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen

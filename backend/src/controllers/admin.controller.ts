@@ -58,7 +58,7 @@ export const getDashboard = async (req: AuthenticatedRequest, res: Response): Pr
     const pendingApprovals = newAppointmentPending;
 
     const employeesByDept: Record<string, number> = {};
-    (employeesByDeptRaw as any[]).forEach((dept: any) => {
+    ((employeesByDeptRaw as any[]) || []).forEach((dept: any) => {
       if (dept.department) {
         employeesByDept[dept.department] = dept._count.id;
       }

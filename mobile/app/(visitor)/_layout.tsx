@@ -1,88 +1,76 @@
-import { Tabs, useRouter } from 'expo-router';
-import { Home, Bell, User as UserIcon, LogOut } from 'lucide-react-native';
-import { TouchableOpacity, Text, View, Alert } from 'react-native';
-import { useAuthStore } from '../../store/authStore';
+import React from 'react';
+import { Tabs } from 'expo-router';
+import { Home, Users, Calendar, User as UserIcon } from 'lucide-react-native';
+import { View } from 'react-native';
+import type { ReactNode } from 'react';
+import VisitorBottomTabBar from '../../components/visitor/VisitorBottomTabBar';
+
+const iconBox = (icon: ReactNode) => (
+  <View style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
+    {icon}
+  </View>
+);
 
 export default function VisitorLayout() {
-  const router = useRouter();
-  const clearAuth = useAuthStore(state => state.clearAuth);
-  const user = useAuthStore(state => state.user);
-
-  console.log("?? MOBILE APP CONNECTED AND RUNNING (LAYOUT MOUNTED)!");
-
-  const handleLogout = () => {
-    try {
-      console.log("Logout button clicked");
-      Alert.alert(
-        "Logout",
-        "Are you sure you want to log out?",
-        [
-          { text: "Cancel", style: "cancel", onPress: () => console.log("Logout cancelled") },
-          { 
-            text: "Logout", 
-            style: "destructive", 
-            onPress: async () => {
-              try {
-                console.log("Processing logout...");
-                await clearAuth();
-                console.log("Logout successful, redirecting to login...");
-                router.replace('/(auth)/login');
-              } catch (err) {
-                console.error("Error during logout process:", err);
-              }
-            } 
-          }
-        ]
-      );
-    } catch (err) {
-      console.error("Error showing logout alert:", err);
-    }
-  };
-
-  const displayName = user?.name || "John";
-
   return (
-    <Tabs screenOptions={{ 
-      tabBarActiveTintColor: '#2563eb',
-      headerShown: false,
-      headerTitleStyle: { fontWeight: 'bold' },
-      headerRight: () => (
-        <View className="flex-row items-center mr-4">
-          <Text className="mr-3 font-semibold text-gray-700">{displayName}</Text>
-          <TouchableOpacity onPress={handleLogout}>
-            <LogOut color="#ef4444" size={24} />
-          </TouchableOpacity>
-        </View>
-      )
-    }}>
+    <Tabs
+      tabBar={(props) => <VisitorBottomTabBar {...props} />}
+      screenOptions={{
+        headerShown: false,
+        sceneStyle: { backgroundColor: '#F7F8FA' },
+        tabBarStyle: {
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
+        },
+      }}
+    >
+      {/* 1. Home */}
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color }) => <Home color={color} size={24} />,
+          title: 'Home',
+          tabBarIcon: ({ color }) => iconBox(<Home color={color} size={22} />),
         }}
       />
+
+      {/* 2. Visits */}
+      <Tabs.Screen
+        name="total-visits"
+        options={{
+          title: 'Visits',
+          tabBarIcon: ({ color }) => iconBox(<Users color={color} size={22} />),
+        }}
+      />
+
+      {/* 3. Appointments */}
+      <Tabs.Screen
+        name="appointment-requests"
+        options={{
+          title: 'Appointments',
+          tabBarIcon: ({ color }) => iconBox(<Calendar color={color} size={22} />),
+        }}
+      />
+
+      {/* 4. Profile */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => iconBox(<UserIcon color={color} size={22} />),
+        }}
+      />
+
+      {/* Auxiliary screens kept accessible via push navigation */}
       <Tabs.Screen
         name="new-registration"
         options={{
           href: null,
-          title: 'New Appoitment',
+          title: 'New Appointment',
         }}
       />
-      <Tabs.Screen
-        name="total-visits"
-        options={{
-          href: null,
-          title: 'Total Visits',
-        }}
-      />
-      <Tabs.Screen
-        name="appointment-requests"
-        options={{
-          href: null,
-          title: 'Appointment Requests',
-        }}
-      />
+
       <Tabs.Screen
         name="visit-history"
         options={{
@@ -90,6 +78,7 @@ export default function VisitorLayout() {
           title: 'Visit History',
         }}
       />
+
       <Tabs.Screen
         name="visit-details/[id]"
         options={{
@@ -102,9 +91,10 @@ export default function VisitorLayout() {
         name="appointment"
         options={{
           href: null,
-          title: 'Appointment',
+          title: 'Appointment Pass',
         }}
       />
+
       <Tabs.Screen
         name="invitations"
         options={{
@@ -112,21 +102,14 @@ export default function VisitorLayout() {
           title: 'Invitations',
         }}
       />
+
       <Tabs.Screen
         name="notifications"
         options={{
+          href: null,
           title: 'Alerts',
-          tabBarIcon: ({ color }) => <Bell color={color} size={24} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <UserIcon color={color} size={24} />,
         }}
       />
     </Tabs>
   );
 }
-
