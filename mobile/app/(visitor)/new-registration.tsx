@@ -291,15 +291,15 @@ export default function NewRegistrationScreen() {
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 18,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
   },
 });

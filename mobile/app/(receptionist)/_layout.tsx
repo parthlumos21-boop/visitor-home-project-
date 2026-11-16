@@ -56,6 +56,16 @@ export default function ReceptionistLayout() {
           tabBarIcon: ({ color }) => <User color={color} size={24} />,
         }}
       />
+      <Tabs.Screen
+        name="new-appointment"
+        options={{
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+          title: 'New Appointment',
+        }}
+      />
     </Tabs>
   );
 }

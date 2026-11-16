@@ -11,6 +11,8 @@ export default function ReceptionistDashboard() {
     <ScrollView className="flex-1 bg-[#F5F5F5]" contentContainerStyle={{ padding: 16 }}>
       
       <TouchableOpacity 
+        onPress={() => router.push('/(receptionist)/new-appointment')}
+        activeOpacity={0.8}
         className="bg-teal-600 rounded-2xl p-6 mb-6 flex-row items-center justify-center shadow-md"
       >
         <Text className="text-white text-xl font-bold ml-2">Register Walk-in Visitor</Text>
