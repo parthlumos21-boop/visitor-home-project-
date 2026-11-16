@@ -34,7 +34,7 @@ export default function EmployeeDetails() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-gray-50 items-center justify-center">
+      <View className="flex-1 bg-[#F5F5F5] items-center justify-center">
         <ActivityIndicator size="large" color="#2563eb" />
       </View>
     );
@@ -43,7 +43,7 @@ export default function EmployeeDetails() {
   if (!employee) return null;
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-[#F5F5F5]">
       <View className="bg-white border-b border-gray-200 pb-3" style={{ paddingTop: insets.top + 16 }}>
         <View className="flex-row items-center px-4">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">

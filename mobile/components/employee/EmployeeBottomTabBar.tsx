@@ -12,7 +12,7 @@ import type { Tabs } from 'expo-router';
 
 export type EmployeeBottomTabBarProps = Parameters<
   NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>
->[0];
+>[0] & { navigation?: any };
 
 // Employee Theme Color Tokens
 const ACTIVE_COLOR = '#2864DC'; // Primary blue
@@ -59,6 +59,15 @@ export const EmployeeBottomTabBar: React.FC<EmployeeBottomTabBarProps> = ({
   }
 
   const currentRoute = state.routes[state.index];
+  const currentOptions = descriptors[currentRoute?.key]?.options;
+  const isCurrentScreenHidden =
+    (currentOptions?.tabBarStyle as any)?.display === 'none' ||
+    (currentOptions?.tabBarItemStyle as any)?.display === 'none' ||
+    !visibleRoutes.some((r) => r.key === currentRoute?.key);
+
+  if (isCurrentScreenHidden) {
+    return null;
+  }
 
   return (
     <View

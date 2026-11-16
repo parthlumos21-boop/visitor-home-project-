@@ -94,7 +94,7 @@ export default function NotificationScreen() {
                 <Bell size={48} color="#d1d5db" />
                 <Text className="text-gray-500 mt-4 font-medium text-lg">No notifications yet</Text>
               </View>
-            ) : null
+            ) : undefined
           }
         />
       )}

@@ -1,4 +1,4 @@
-﻿module.exports = ({ config }) => {
+module.exports = ({ config }) => {
   const isExpoGo = process.env.EXPO_GO === '1';
 
   let plugins = [
@@ -42,7 +42,7 @@
         "POST_NOTIFICATIONS"
       ],
       adaptiveIcon: {
-        backgroundColor: "#E6F4FE",
+        backgroundColor: "#F5F5F5",
         foregroundImage: "./assets/android-icon-foreground.png",
         backgroundImage: "./assets/android-icon-background.png",
         monochromeImage: "./assets/android-icon-monochrome.png"

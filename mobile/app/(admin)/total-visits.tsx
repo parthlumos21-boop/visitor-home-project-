@@ -125,7 +125,7 @@ export default function AdminTotalVisits() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-[#F5F5F5]">
       <View className="bg-white border-b border-gray-200" style={{ paddingTop: Math.max(insets.top, 16) + 8 }}>
         <View className="flex-row items-center px-4 pb-3">
           <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">

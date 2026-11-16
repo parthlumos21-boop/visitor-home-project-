@@ -1,59 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Modal, FlatList, Alert, Platform } from 'react-native';
+import { View, ScrollView, Platform, Alert, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
-import { ChevronDown, X, ArrowLeft, Calendar, Clock } from 'lucide-react-native';
+import { Calendar, Clock } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CustomButton } from '../../components/CustomButton';
 import { createNewAppointment } from '../../services/appointments';
 import { getApiErrorMessage } from '../../services/errorMessage';
-
-// Reusable Select Component
-const SelectField = ({ label, value, options, onSelect, placeholder }: any) => {
-  const [modalVisible, setModalVisible] = useState(false);
-  return (
-    <View className="mb-3 flex-1">
-      {label && <Text className="text-gray-700 font-medium mb-1">{label}</Text>}
-      <TouchableOpacity 
-        className="flex-row justify-between items-center bg-gray-50 border border-gray-200 p-3 rounded-lg"
-        onPress={() => setModalVisible(true)}
-      >
-        <Text className={value ? "text-black" : "text-gray-400"}>
-          {value || placeholder || (label ? `Select ${label.replace(' *', '').toLowerCase()}` : 'Select')}
-        </Text>
-        <ChevronDown color="#9ca3af" size={20} />
-      </TouchableOpacity>
-
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-3xl p-6 h-1/2">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-bold">{label ? `Select ${label.replace(' *', '')}` : 'Select Option'}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <X color="#000" size={24} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={options}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  className="p-4 border-b border-gray-100"
-                  onPress={() => {
-                    onSelect(item);
-                    setModalVisible(false);
-                  }}
-                >
-                  <Text className="text-lg text-gray-800">{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
-    </View>
-  );
-};
+import AppointmentFormHeader from '../../components/form/AppointmentFormHeader';
+import FormSectionHeader from '../../components/form/FormSectionHeader';
+import RoundedTextInput from '../../components/form/RoundedTextInput';
+import RoundedDropdown from '../../components/form/RoundedDropdown';
+import AppointmentSubmitButton from '../../components/form/AppointmentSubmitButton';
 
 export default function EmployeeNewAppointment() {
   const router = useRouter();
@@ -136,233 +93,198 @@ export default function EmployeeNewAppointment() {
     }
   };
 
-  // Dynamic calculations for Appointment Summary
-  const expiresTime = useMemo(() => {
-    if (!arrivalTime || !validFor) return '--:--';
-    
-    // Parse time like "10:30 AM"
-    const [timeString, period] = arrivalTime.split(' ');
-    if (!timeString || !period) return 'Custom';
-    
-    let [hoursStr, minutesStr] = timeString.split(':');
-    let hours = parseInt(hoursStr, 10);
-    const minutes = parseInt(minutesStr, 10);
-    
-    if (period === 'PM' && hours < 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-    
-    const date = new Date();
-    date.setHours(hours);
-    date.setMinutes(minutes);
-    
-    if (validFor === 'Short Visit') date.setMinutes(date.getMinutes() + 30);
-    else if (validFor === '1 Hour') date.setHours(date.getHours() + 1);
-    else if (validFor === '2 Hours') date.setHours(date.getHours() + 2);
-    else if (validFor === '4 Hours') date.setHours(date.getHours() + 4);
-    else if (validFor === 'Full Day') date.setHours(date.getHours() + 8);
-    else return 'Custom';
-
-    // Format output back to 12-hour AM/PM format
-    let outHours = date.getHours();
-    const outMinutes = String(date.getMinutes()).padStart(2, '0');
-    const outPeriod = outHours >= 12 ? 'PM' : 'AM';
-    outHours = outHours % 12 || 12;
-
-    return `${String(outHours).padStart(2, '0')}:${outMinutes} ${outPeriod}`;
-  }, [arrivalTime, validFor]);
-
-  const SectionHeader = ({ icon, title, subtitle }: any) => (
-    <View className="mb-4 bg-gray-50 border border-gray-100 p-4 rounded-xl flex-row items-center">
-      <View className="w-10 h-10 bg-white rounded-full items-center justify-center mr-3 shadow-sm border border-gray-100">
-        {icon}
-      </View>
-      <View>
-        <Text className="text-base font-bold text-gray-900">{title}</Text>
-        <Text className="text-xs text-gray-500">{subtitle}</Text>
-      </View>
-    </View>
-  );
-
   return (
-    <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="bg-white border-b border-gray-200 px-4 pb-3 flex-row items-center" style={{ paddingTop: insets.top + 8 }}>
-        <TouchableOpacity onPress={() => router.push('/(employee)/dashboard')} className="mr-3 p-2 -ml-2">
-          <ArrowLeft color="#111827" size={24} />
-        </TouchableOpacity>
-        <Text className="text-xl font-bold text-gray-950 flex-1">New Appointment</Text>
-      </View>
+    <View style={styles.screenContainer}>
+      {/* 1. Header Section - Clean single top bar */}
+      <AppointmentFormHeader
+        title="New Appointment"
+        onBackPress={() => router.push('/(employee)/dashboard')}
+      />
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
-        <View className="mb-6">
-          <Text className="text-2xl font-bold text-gray-900 mb-1">Create New Appointment</Text>
-          <Text className="text-gray-500">Create a new visitor appointment</Text>
-        </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingBottom: insets.bottom + 120,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* SECTION 1: BASIC DETAILS */}
+        <FormSectionHeader title="BASIC DETAILS" />
 
-        {/* 👤 Visitor Information */}
-        <View className="mb-6">
+        <RoundedTextInput
+          label="Full Name"
+          placeholder="Enter full name"
+          value={fullName}
+          onChangeText={setFullName}
+        />
 
-          <View className="mb-3">
-            <Text className="text-gray-700 font-medium mb-1">Full Name *</Text>
-            <TextInput
-              className="bg-gray-50 border border-gray-200 p-3 rounded-lg text-black"
-              placeholder="Enter full name"
-              placeholderTextColor="#9ca3af"
-              value={fullName}
-              onChangeText={setFullName}
-            />
-          </View>
+        <RoundedTextInput
+          label="Mobile Number"
+          placeholder="Enter mobile number"
+          keyboardType="phone-pad"
+          value={mobileNumber}
+          onChangeText={setMobileNumber}
+        />
 
-          <View className="mb-3">
-            <Text className="text-gray-700 font-medium mb-1">Mobile Number *</Text>
-            <TextInput
-              className="bg-gray-50 border border-gray-200 p-3 rounded-lg text-black"
-              placeholder="Enter mobile no."
-              placeholderTextColor="#9ca3af"
-              keyboardType="phone-pad"
-              value={mobileNumber}
-              onChangeText={setMobileNumber}
-            />
-          </View>
+        <RoundedTextInput
+          label="Email ID"
+          placeholder="Enter email address"
+          keyboardType="email-address"
+          optional
+          value={emailAddress}
+          onChangeText={setEmailAddress}
+        />
 
-          <View className="mb-3">
-            <Text className="text-gray-700 font-medium mb-1">Email Address</Text>
-            <TextInput
-              className="bg-gray-50 border border-gray-200 p-3 rounded-lg text-black"
-              placeholder="Enter email address"
-              placeholderTextColor="#9ca3af"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={emailAddress}
-              onChangeText={setEmailAddress}
-            />
-          </View>
+        <RoundedTextInput
+          label="Company"
+          placeholder="Enter company name"
+          optional
+          value={companyName}
+          onChangeText={setCompanyName}
+        />
 
-          <View className="mb-3">
-            <Text className="text-gray-700 font-medium mb-1">Company Name</Text>
-            <TextInput
-              className="bg-gray-50 border border-gray-200 p-3 rounded-lg text-black"
-              placeholder="Enter company name"
-              placeholderTextColor="#9ca3af"
-              value={companyName}
-              onChangeText={setCompanyName}
-            />
-          </View>
+        {/* SECTION DIVIDER */}
+        <View style={styles.divider} />
 
-          <SelectField label="Visitor Type *" value={visitorType} options={visitorTypes} onSelect={setVisitorType} />
-          <SelectField label="Purpose *" value={purpose} options={purposes} onSelect={setPurpose} />
-        </View>
+        {/* SECTION 2: VISIT DETAILS */}
+        <FormSectionHeader title="VISIT DETAILS" />
 
-        {/* Form fields without Appointment Details heading */}
-        <View className="mb-6">
-          <View className="mb-3">
-            <Text className="text-gray-700 font-medium mb-1">Appointment Date *</Text>
-            <TouchableOpacity 
-              className="flex-row items-center bg-gray-50 border border-gray-200 p-3 rounded-lg"
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Calendar color="#6b7280" size={20} className="mr-3" />
-              <Text className="text-gray-800 flex-1">{appointmentDate.toDateString()}</Text>
-              <ChevronDown color="#9ca3af" size={20} />
-            </TouchableOpacity>
-            {showDatePicker && (
-              <DateTimePicker
-                value={appointmentDate}
-                mode="date"
-                display="default"
-                minimumDate={new Date()}
-                onValueChange={(eventOrDate: any, possibleDate?: any) => {
-                  setShowDatePicker(Platform.OS === 'ios');
-                  let d: Date | null = null;
-                  if (eventOrDate instanceof Date) d = eventOrDate;
-                  else if (possibleDate instanceof Date) d = possibleDate;
-                  else if (eventOrDate?.nativeEvent?.timestamp) d = new Date(eventOrDate.nativeEvent.timestamp);
-                  else if (typeof eventOrDate === 'number' || typeof eventOrDate === 'string') d = new Date(eventOrDate);
+        <RoundedDropdown
+          label="Visitor Type *"
+          value={visitorType}
+          options={visitorTypes}
+          onSelect={(val) => setVisitorType(String(val))}
+        />
 
-                  if (d && !isNaN(d.getTime())) {
-                    setAppointmentDate(d);
-                  }
-                }}
-                onDismiss={() => setShowDatePicker(false)}
-              />
-            )}
-          </View>
+        <RoundedDropdown
+          label="Purpose of Visit *"
+          value={purpose}
+          options={purposes}
+          onSelect={(val) => setPurpose(String(val))}
+        />
 
-          <View className="mb-3">
-            <Text className="text-gray-700 font-medium mb-1">Arrival Time *</Text>
-            <TouchableOpacity 
-              className="flex-row items-center justify-between bg-gray-50 border border-gray-200 p-3 rounded-lg"
-              onPress={() => setShowArrivalPicker(true)}
-            >
-              <Text className={arrivalTime ? 'text-black' : 'text-gray-400'}>
-                {arrivalTime || 'Select Time'}
-              </Text>
-              <Clock color="#9ca3af" size={20} />
-            </TouchableOpacity>
-            
-            {showArrivalPicker && (
-              <DateTimePicker
-                value={new Date()}
-                mode="time"
-                display="default"
-                onValueChange={(eventOrDate: any, possibleDate?: any) => {
-                  setShowArrivalPicker(Platform.OS === 'ios');
-                  let d: Date | null = null;
-                  if (eventOrDate instanceof Date) d = eventOrDate;
-                  else if (possibleDate instanceof Date) d = possibleDate;
-                  else if (eventOrDate?.nativeEvent?.timestamp) d = new Date(eventOrDate.nativeEvent.timestamp);
-                  else if (typeof eventOrDate === 'number' || typeof eventOrDate === 'string') d = new Date(eventOrDate);
+        {/* Visit Date */}
+        <RoundedTextInput
+          label="Visit Date"
+          placeholder="Select visit date"
+          value={appointmentDate.toDateString()}
+          editable={false}
+          rightIcon={<Calendar color="#3478F6" size={20} />}
+          onRightIconPress={() => setShowDatePicker(true)}
+        />
 
-                  if (d && !isNaN(d.getTime())) {
-                    let hours = d.getHours();
-                    const minutes = String(d.getMinutes()).padStart(2, '0');
-                    const period = hours >= 12 ? 'PM' : 'AM';
-                    hours = hours % 12 || 12;
-                    setArrivalTime(`${String(hours).padStart(2, '0')}:${minutes} ${period}`);
-                  }
-                }}
-                onDismiss={() => setShowArrivalPicker(false)}
-              />
-            )}
-          </View>
+        {showDatePicker && (
+          <DateTimePicker
+            value={appointmentDate}
+            mode="date"
+            display="default"
+            minimumDate={new Date()}
+            onDismiss={() => setShowDatePicker(false)}
+            onValueChange={(eventOrDate: any, possibleDate?: any) => {
+              setShowDatePicker(Platform.OS === 'ios');
+              let d: Date | null = null;
+              if (eventOrDate instanceof Date) d = eventOrDate;
+              else if (possibleDate instanceof Date) d = possibleDate;
+              else if (eventOrDate?.nativeEvent?.timestamp) d = new Date(eventOrDate.nativeEvent.timestamp);
+              else if (typeof eventOrDate === 'number' || typeof eventOrDate === 'string') d = new Date(eventOrDate);
 
-          <SelectField label="Valid For *" value={validFor} options={validForOptions} onSelect={setValidFor} />
-        </View>
-
-        {/* 📝 Additional Information */}
-        <View className="mb-6">
-
-          <View className="mb-3">
-            <Text className="text-gray-700 font-medium mb-1">Notes</Text>
-            <TextInput
-              className="bg-gray-50 border border-gray-200 p-3 rounded-lg text-black h-24"
-              placeholder="Enter additional notes..."
-              placeholderTextColor="#9ca3af"
-              multiline
-              textAlignVertical="top"
-              value={notes}
-              onChangeText={setNotes}
-            />
-          </View>
-        </View>
-
-        {/* Actions */}
-        <View className="mb-8 flex-row items-center justify-end gap-3">
-          <TouchableOpacity 
-            className="h-12 min-w-[104px] items-center justify-center rounded-lg border border-gray-300 bg-white px-4"
-            onPress={() => router.push('/(employee)/dashboard')}
-            disabled={isLoading}
-          >
-            <Text className="text-gray-700 font-bold">Cancel</Text>
-          </TouchableOpacity>
-          <CustomButton
-            title="Create Appointment"
-            onPress={handleCreateAppointment}
-            isLoading={isLoading}
-            className="h-12 min-w-[168px] px-5"
+              if (d && !isNaN(d.getTime())) {
+                setAppointmentDate(d);
+              }
+            }}
           />
-        </View>
+        )}
+
+        {/* Expected Arrival */}
+        <RoundedTextInput
+          label="Expected Arrival"
+          placeholder="Select arrival time"
+          value={arrivalTime}
+          editable={false}
+          rightIcon={<Clock color="#3478F6" size={20} />}
+          onRightIconPress={() => setShowArrivalPicker(true)}
+        />
+
+        {showArrivalPicker && (
+          <DateTimePicker
+            value={new Date()}
+            mode="time"
+            display="default"
+            onDismiss={() => setShowArrivalPicker(false)}
+            onValueChange={(eventOrDate: any, possibleDate?: any) => {
+              setShowArrivalPicker(Platform.OS === 'ios');
+              let d: Date | null = null;
+              if (eventOrDate instanceof Date) d = eventOrDate;
+              else if (possibleDate instanceof Date) d = possibleDate;
+              else if (eventOrDate?.nativeEvent?.timestamp) d = new Date(eventOrDate.nativeEvent.timestamp);
+              else if (typeof eventOrDate === 'number' || typeof eventOrDate === 'string') d = new Date(eventOrDate);
+
+              if (d && !isNaN(d.getTime())) {
+                let hours = d.getHours();
+                const minutes = String(d.getMinutes()).padStart(2, '0');
+                const period = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12 || 12;
+                setArrivalTime(`${String(hours).padStart(2, '0')}:${minutes} ${period}`);
+              }
+            }}
+          />
+        )}
+
+        <RoundedDropdown
+          label="Valid For *"
+          value={validFor}
+          options={validForOptions}
+          onSelect={(val) => setValidFor(String(val))}
+        />
+
+        {/* SECTION DIVIDER */}
+        <View style={styles.divider} />
+
+        {/* SECTION 3: OPTIONAL DETAILS */}
+        <FormSectionHeader title="OPTIONAL DETAILS" />
+
+        <RoundedTextInput
+          label="Notes"
+          placeholder="Add additional notes"
+          optional
+          multiline
+          numberOfLines={3}
+          value={notes}
+          onChangeText={setNotes}
+        />
+
+        {/* SUBMIT BUTTON */}
+        <AppointmentSubmitButton
+          title="New Appointment"
+          onPress={handleCreateAppointment}
+          loading={isLoading}
+        />
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screenContainer: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    backgroundColor: '#F5F5F5',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 18,
+  },
+});

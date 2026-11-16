@@ -43,7 +43,7 @@ export default function VisitorsScreen() {
   }, [loadVisitors]);
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-[#F5F5F5]">
       <View className="bg-white px-4 pt-14 pb-4 border-b border-gray-200 flex-row justify-between items-center">
         <Text className="text-xl font-bold text-gray-950">Visitors</Text>
         <TouchableOpacity 

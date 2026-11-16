@@ -1,9 +1,18 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { NetworkProvider } from '../store/NetworkContext';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator, Text as RNText, TextInput as RNTextInput } from 'react-native';
 import Toast, { ToastConfig, ToastConfigParams } from 'react-native-toast-message';
+import {
+  useFonts,
+  OpenSans_300Light,
+  OpenSans_400Regular,
+  OpenSans_500Medium,
+  OpenSans_600SemiBold,
+  OpenSans_700Bold,
+  OpenSans_800ExtraBold,
+} from '@expo-google-fonts/open-sans';
 
 import { NotificationProvider } from '../context/NotificationContext';
 
@@ -11,29 +20,44 @@ import { NotificationProvider } from '../context/NotificationContext';
 import '../global.css';
 
 const toastConfig: ToastConfig = {
-  instagram: ({ text1, text2, props }: ToastConfigParams<any>) => (
+  instagram: ({ text1, text2 }: ToastConfigParams<any>) => (
     <View className="bg-white rounded-2xl mx-4 p-4 shadow-lg w-[92%] mt-2 border border-gray-100">
       <View className="flex-row items-center justify-between mb-2">
         <View className="flex-row items-center">
           <View className="h-6 w-6 rounded-full bg-blue-600 items-center justify-center mr-2">
-            <Text className="text-white text-xs font-bold">C</Text>
+            <RNText className="text-white text-xs font-bold">C</RNText>
           </View>
-          <Text className="text-gray-500 font-semibold text-xs tracking-wider">COLLAB.IO DEMO</Text>
+          <RNText className="text-gray-500 font-semibold text-xs tracking-wider">COLLAB.IO DEMO</RNText>
         </View>
-        <Text className="text-gray-400 text-xs">now</Text>
+        <RNText className="text-gray-400 text-xs">now</RNText>
       </View>
-      <Text className="text-black font-bold text-[15px] mb-1" numberOfLines={1}>{text1}</Text>
-      <Text className="text-gray-700 text-sm leading-5" numberOfLines={3}>{text2}</Text>
+      <RNText className="text-black font-bold text-[15px] mb-1" numberOfLines={1}>{text1}</RNText>
+      <RNText className="text-gray-700 text-sm leading-5" numberOfLines={3}>{text2}</RNText>
     </View>
   )
 };
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    'OpenSans-Light': OpenSans_300Light,
+    'OpenSans-Regular': OpenSans_400Regular,
+    'OpenSans-Medium': OpenSans_500Medium,
+    'OpenSans-SemiBold': OpenSans_600SemiBold,
+    'OpenSans-Bold': OpenSans_700Bold,
+    'OpenSans-ExtraBold': OpenSans_800ExtraBold,
+    OpenSans: OpenSans_400Regular,
+    OpenSans_300Light,
+    OpenSans_400Regular,
+    OpenSans_500Medium,
+    OpenSans_600SemiBold,
+    OpenSans_700Bold,
+    OpenSans_800ExtraBold,
+  });
+
   const { user, token, isLoading, initializeAuth } = useAuthStore();
   const segments = useSegments();
   const [isReady, setIsReady] = useState(false);
 
-  // Wait until root layout mounts
   useEffect(() => {
     setIsReady(true);
   }, []);
@@ -44,7 +68,7 @@ export default function RootLayout() {
   }, [initializeAuth]);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || !fontsLoaded) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     
@@ -69,23 +93,24 @@ export default function RootLayout() {
         }
       }
     }
-  }, [token, user, isLoading, segments]);
+  }, [token, user, isLoading, fontsLoaded, segments]);
 
-  if (isLoading) {
+  if (!fontsLoaded || isLoading) {
     return (
-      <View className="flex-1 justify-center items-center bg-white">
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' }}>
         <ActivityIndicator size="large" color="#2563eb" />
       </View>
     );
   }
 
   return (
-    <NetworkProvider>
-      <NotificationProvider>
-        <Slot />
-        <Toast config={toastConfig} />
-      </NotificationProvider>
-    </NetworkProvider>
+    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+      <NetworkProvider>
+        <NotificationProvider>
+          <Slot />
+          <Toast config={toastConfig} />
+        </NotificationProvider>
+      </NetworkProvider>
+    </View>
   );
 }
-

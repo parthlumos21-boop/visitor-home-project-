@@ -129,7 +129,7 @@ export default function AdminDashboard() {
   const cardWidth = availableWidth / numColumns;
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-[#F5F5F5]">
       <View className="bg-white border-b border-gray-100 px-4 pb-4" style={{ paddingTop: insets.top + 16 }}>
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center flex-1">

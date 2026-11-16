@@ -20,6 +20,7 @@ import api from '../../services/api';
 import EmployeeDashboardHeader from '../../components/employee/EmployeeDashboardHeader';
 import EmployeeWelcomeCard from '../../components/employee/EmployeeWelcomeCard';
 import EmployeeDailySummary from '../../components/employee/EmployeeDailySummary';
+import VisitorFloatingActionButton from '../../components/visitor/VisitorFloatingActionButton';
 
 export default function EmployeeDashboard() {
   const router = useRouter();
@@ -115,7 +116,7 @@ export default function EmployeeDashboard() {
           styles.scrollContent,
           {
             paddingTop: Math.max(insets.top, 16) + 12,
-            paddingBottom: insets.bottom + 110,
+            paddingBottom: insets.bottom + 140,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -156,6 +157,11 @@ export default function EmployeeDashboard() {
           <EmployeeDailySummary stats={stats} onNavigate={handleNavigate} />
         )}
       </ScrollView>
+
+      {/* Floating Action Button (Create Appointment) */}
+      <VisitorFloatingActionButton
+        onPress={() => handleNavigate('new-appointment')}
+      />
 
       {/* Logout Modal */}
       <Modal transparent visible={isLogoutVisible} animationType="fade" onRequestClose={() => setLogoutVisible(false)}>
@@ -227,7 +233,7 @@ export default function EmployeeDashboard() {
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: '#F7F8FA',
+    backgroundColor: '#F5F5F5',
     position: 'relative',
   },
   scrollView: {

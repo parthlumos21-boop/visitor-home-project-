@@ -9,6 +9,7 @@ export default function ReceptionistLayout() {
     <Tabs screenOptions={{ 
       tabBarActiveTintColor: '#2563eb',
       headerShown: true,
+      sceneStyle: { backgroundColor: '#F5F5F5' },
       headerTitleStyle: { fontWeight: 'bold' }
     }}>
       <Tabs.Screen

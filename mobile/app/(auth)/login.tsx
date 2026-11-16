@@ -96,7 +96,7 @@ export default function LoginScreen() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: '#f1f5f9' }}
+      style={{ flex: 1, backgroundColor: '#F5F5F5' }}
       contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 40 }}
       keyboardShouldPersistTaps="handled"
     >

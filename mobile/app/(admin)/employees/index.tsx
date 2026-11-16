@@ -151,7 +151,7 @@ export default function EmployeeList() {
       keyboardDismissMode="none"
       automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
       contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 120 }}
-      renderItem={null}
+      renderItem={() => null}
       ListHeaderComponent={
         <View className="bg-white border border-gray-200 rounded-lg p-4">
           <Text className="text-base font-bold text-gray-900 mb-4">Add Employee</Text>
@@ -323,7 +323,7 @@ export default function EmployeeList() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-gray-50"
+      className="flex-1 bg-[#F5F5F5]"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.top + 64}
     >

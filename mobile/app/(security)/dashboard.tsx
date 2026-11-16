@@ -144,7 +144,7 @@ export default function SecurityDashboard() {
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: '#F7F8FA',
+    backgroundColor: '#F5F5F5',
     position: 'relative',
   },
   scrollView: {

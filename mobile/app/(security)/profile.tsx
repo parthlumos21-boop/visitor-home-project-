@@ -6,7 +6,7 @@ export default function SecurityProfile() {
   const { clearAuth } = useAuthStore();
 
   return (
-    <View className="flex-1 justify-center items-center bg-gray-50 p-6">
+    <View className="flex-1 justify-center items-center bg-[#F5F5F5] p-6">
       <Text className="text-xl text-gray-500 mb-8">Security Profile</Text>
       <TouchableOpacity 
         onPress={clearAuth}

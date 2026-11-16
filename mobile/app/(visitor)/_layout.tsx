@@ -17,7 +17,7 @@ export default function VisitorLayout() {
       tabBar={(props) => <VisitorBottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: '#F7F8FA' },
+        sceneStyle: { backgroundColor: '#F5F5F5' },
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: 'transparent',
@@ -66,7 +66,9 @@ export default function VisitorLayout() {
       <Tabs.Screen
         name="new-registration"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
           title: 'New Appointment',
         }}
       />
@@ -74,7 +76,9 @@ export default function VisitorLayout() {
       <Tabs.Screen
         name="visit-history"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
           title: 'Visit History',
         }}
       />
@@ -82,7 +86,9 @@ export default function VisitorLayout() {
       <Tabs.Screen
         name="visit-details/[id]"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
           title: 'Visit Details',
         }}
       />
@@ -90,7 +96,9 @@ export default function VisitorLayout() {
       <Tabs.Screen
         name="appointment"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
           title: 'Appointment Pass',
         }}
       />
@@ -98,7 +106,9 @@ export default function VisitorLayout() {
       <Tabs.Screen
         name="invitations"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
           title: 'Invitations',
         }}
       />
@@ -106,7 +116,9 @@ export default function VisitorLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
           title: 'Alerts',
         }}
       />

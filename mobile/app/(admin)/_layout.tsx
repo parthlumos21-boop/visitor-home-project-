@@ -19,7 +19,7 @@ export default function AdminLayout() {
       tabBar={(props) => <CustomBottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: '#f9fafb' },
+        sceneStyle: { backgroundColor: '#F5F5F5' },
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: 'transparent',
@@ -75,43 +75,57 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="approvals"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
         name="employees/[id]"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
         name="users"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
         name="add-visitor"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
         name="total-visits"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
         name="visit-details/[id]"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
         }}
       />
     </Tabs>

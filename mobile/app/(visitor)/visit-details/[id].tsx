@@ -75,7 +75,7 @@ export default function VisitDetails() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-gray-50 items-center justify-center">
+      <View className="flex-1 bg-[#F5F5F5] items-center justify-center">
         <ActivityIndicator size="large" color="#2563eb" />
       </View>
     );
@@ -83,7 +83,7 @@ export default function VisitDetails() {
 
   if (!visit) {
     return (
-      <View className="flex-1 bg-gray-50">
+      <View className="flex-1 bg-[#F5F5F5]">
         <View className="bg-white px-4 pt-12 pb-4 flex-row items-center border-b border-gray-100 shadow-sm">
           <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 -ml-2">
             <ArrowLeft color="#111827" size={24} />
@@ -100,7 +100,7 @@ export default function VisitDetails() {
   const qrValue = visit.qrCode?.token || visit.displayId || visit.id;
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-[#F5F5F5]">
       {/* Header */}
       <View className="bg-white px-4 pt-12 pb-4 flex-row items-center border-b border-gray-100 shadow-sm">
         <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 -ml-2">

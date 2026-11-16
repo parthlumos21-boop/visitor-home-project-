@@ -32,7 +32,7 @@ export default function VisitorAppointments() {
   const status = (params.status as string) || 'REGISTERED';
 
   return (
-    <ScrollView className="flex-1 bg-gray-50 px-4 pt-6">
+    <ScrollView className="flex-1 bg-[#F5F5F5] px-4 pt-6">
       <Text className="text-sm font-bold text-gray-500 tracking-widest mb-4">Appointment Details</Text>
 
       <View className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">

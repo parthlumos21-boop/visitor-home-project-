@@ -1,11 +1,12 @@
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { isRunningInExpoGo } from 'expo';
 
 export async function registerForPushNotificationsAsync() {
-  const isExpoGo = Constants.appOwnership === 'expo';
+  const isExpoGo = isRunningInExpoGo() || Constants.appOwnership === 'expo' || (Constants as any).executionEnvironment === 'storeClient';
   if (isExpoGo) {
-    console.log('Skipping push notification registration in Expo Go.');
+    console.log('Skipping remote push notification registration in Expo Go (not supported since SDK 53; use dev build for push).');
     return null;
   }
 
@@ -13,15 +14,19 @@ export async function registerForPushNotificationsAsync() {
 
   if (Platform.OS === 'android') {
     console.log('📱 [Push Config] Attempting to configure MAX lock screen channel...');
-    await Notifications.setNotificationChannelAsync('max', {
-      name: 'max',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      sound: 'default',
-    });
-    console.log('✅ [Push Config] Successfully locked channel [max] to MAX importance & PUBLIC lock screen!');
+    try {
+      await Notifications.setNotificationChannelAsync('max', {
+        name: 'max',
+        importance: Notifications.AndroidImportance?.MAX ?? 5,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility?.PUBLIC ?? 1,
+        sound: 'default',
+      });
+      console.log('✅ [Push Config] Successfully configured channel [max]');
+    } catch (err) {
+      console.log('⚠️ [Push Config] Could not set notification channel:', err);
+    }
   }
 
   if (!Device.isDevice) {

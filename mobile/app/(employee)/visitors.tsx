@@ -80,7 +80,7 @@ export default function EmployeeVisitors() {
   }, [filter]);
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-[#F5F5F5]">
       <View className="bg-white border-b border-gray-200 px-4 pb-3 flex-row items-center" style={{ paddingTop: insets.top + 8 }}>
         <TouchableOpacity onPress={() => router.push('/(employee)/dashboard')} className="mr-3 p-2 -ml-2">
           <ArrowLeft color="#111827" size={24} />

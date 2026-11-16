@@ -31,7 +31,7 @@ export default function VisitHistory() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-[#F5F5F5]">
       {/* Header */}
       <View className="bg-white px-4 pt-12 pb-4 flex-row items-center border-b border-gray-100 shadow-sm">
         <TouchableOpacity onPress={() => router.back()} className="mr-4 p-2 -ml-2">

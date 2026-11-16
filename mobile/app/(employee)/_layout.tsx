@@ -20,7 +20,7 @@ export default function EmployeeLayout() {
       tabBar={(props) => <EmployeeBottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: '#F7F8FA' },
+        sceneStyle: { backgroundColor: '#F5F5F5' },
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: 'transparent',
@@ -92,7 +92,9 @@ export default function EmployeeLayout() {
       <Tabs.Screen
         name="new-appointment"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
           title: 'New Appointment',
         }}
       />

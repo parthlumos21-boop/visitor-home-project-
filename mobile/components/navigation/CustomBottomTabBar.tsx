@@ -12,7 +12,7 @@ import type { Tabs } from 'expo-router';
 
 export type BottomTabBarProps = Parameters<
   NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>
->[0];
+>[0] & { navigation?: any };
 
 // Admin dashboard primary brand colors
 const ACTIVE_COLOR = '#2563eb'; // Royal blue matching admin dashboard primary
@@ -60,6 +60,15 @@ export const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({
   }
 
   const currentRoute = state.routes[state.index];
+  const currentOptions = descriptors[currentRoute?.key]?.options;
+  const isCurrentScreenHidden =
+    (currentOptions?.tabBarStyle as any)?.display === 'none' ||
+    (currentOptions?.tabBarItemStyle as any)?.display === 'none' ||
+    !visibleRoutes.some((r) => r.key === currentRoute?.key);
+
+  if (isCurrentScreenHidden) {
+    return null;
+  }
 
   return (
     <View

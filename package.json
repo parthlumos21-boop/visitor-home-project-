@@ -19,6 +19,7 @@
     "doctor:mobile-network:fix": "npm --workspace=mobile run doctor:network:fix",
     "start:mobile:tunnel": "npm --workspace=mobile run start:tunnel -- -c",
     "start:mobile:clean": "npm --workspace=mobile run start -- -c",
+    "start:clean": "npm run start:mobile:clean",
     "start:mobile:ios": "npm --workspace=mobile run start:ios",
     "start:mobile:tablet": "npm --workspace=mobile run start:tablet",
     "start:mobile:offline": "npm --workspace=mobile run start:offline",
@@ -26,12 +27,12 @@
     "dev:frontend": "npm --workspace=frontend run dev"
   },
   "overrides": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   },
   "dependencies": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"

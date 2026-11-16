@@ -1,3 +1,27 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.font-light {
+  font-family: 'OpenSans-Light';
+}
+
+.font-normal, .font-regular {
+  font-family: 'OpenSans-Regular';
+}
+
+.font-medium {
+  font-family: 'OpenSans-Medium';
+}
+
+.font-semibold {
+  font-family: 'OpenSans-SemiBold';
+}
+
+.font-bold {
+  font-family: 'OpenSans-Bold';
+}
+
+.font-extrabold {
+  font-family: 'OpenSans-ExtraBold';
+}

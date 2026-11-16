@@ -17,7 +17,7 @@ export default function SecurityLayout() {
       tabBar={(props) => <SecurityBottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: '#F7F8FA' },
+        sceneStyle: { backgroundColor: '#F5F5F5' },
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: 'transparent',
@@ -66,7 +66,9 @@ export default function SecurityLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          href: null,
+          tabBarItemStyle: { display: 'none' },
+          tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
           title: 'History',
         }}
       />

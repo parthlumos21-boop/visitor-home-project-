@@ -31,7 +31,7 @@ export default function ScanScreen() {
 
   if (!permission.granted) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50 px-6">
+      <View className="flex-1 justify-center items-center bg-[#F5F5F5] px-6">
         <Text className="text-xl font-bold text-gray-900 mb-2">Camera Access Required</Text>
         <Text className="text-center text-gray-600 mb-6">
           We need your permission to use the camera to scan visitor QR codes.
@@ -126,7 +126,7 @@ export default function ScanScreen() {
 
   if (!isConnected) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50 p-6">
+      <View className="flex-1 justify-center items-center bg-[#F5F5F5] p-6">
         <Text className="text-red-500 font-bold text-xl mb-2">Offline Error</Text>
         <Text className="text-center text-gray-600">
           QR validation is strictly server-authoritative. You cannot scan passes while offline.
@@ -163,7 +163,7 @@ export default function ScanScreen() {
           </View>
         </View>
       ) : (
-        <View className="flex-1 bg-gray-50">
+        <View className="flex-1 bg-[#F5F5F5]">
           {/* Header */}
           <View 
             className="bg-white px-4 pb-3 border-b border-gray-200 flex-row items-center justify-between"

@@ -1,7 +1,11 @@
 const { getDefaultConfig } = require("expo/metro-config");
 const { withNativeWind } = require("nativewind/metro");
+const path = require('path');
 
-const config = getDefaultConfig(__dirname);
+const projectRoot = __dirname;
+const workspaceRoot = path.resolve(__dirname, '..');
+
+const config = getDefaultConfig(projectRoot);
 
 // Ignore the backend and frontend directories to prevent Metro from scanning them and running out of memory
 config.resolver.blockList = [
@@ -9,9 +13,19 @@ config.resolver.blockList = [
   /.*\/frontend\/.*/,
 ];
 
-// Only watch the mobile directory and the root node_modules
-const path = require('path');
-config.watchFolders = [__dirname, path.resolve(__dirname, '../node_modules')];
+// Watch both project and workspace node_modules
+config.watchFolders = [projectRoot, path.resolve(workspaceRoot, 'node_modules')];
+
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'),
+  path.resolve(workspaceRoot, 'node_modules'),
+];
+
+config.resolver.extraNodeModules = {
+  ...config.resolver.extraNodeModules,
+  'react-native-worklets': path.resolve(workspaceRoot, 'node_modules/react-native-worklets'),
+  'react-native-reanimated': path.resolve(workspaceRoot, 'node_modules/react-native-reanimated'),
+};
 
 module.exports = withNativeWind(config, { 
   input: path.resolve(__dirname, "./global.css"),

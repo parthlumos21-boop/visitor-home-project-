@@ -206,7 +206,7 @@ export default function ApprovalsScreen() {
   const displayedAppointments = activeTab === 'PENDING' ? pendingAppointments : approvedAppointments;
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-[#F5F5F5]">
       <View className="bg-white px-4 pt-12 pb-2 border-b border-gray-200">
         <Text className="text-xl font-bold text-gray-950">Visitor Approval Request</Text>
         <Text className="mt-1 text-sm text-gray-500">Manage appointment requests</Text>

@@ -8,7 +8,7 @@ export default function ReceptionistDashboard() {
   const router = useRouter();
 
   return (
-    <ScrollView className="flex-1 bg-gray-50" contentContainerStyle={{ padding: 16 }}>
+    <ScrollView className="flex-1 bg-[#F5F5F5]" contentContainerStyle={{ padding: 16 }}>
       
       <TouchableOpacity 
         className="bg-teal-600 rounded-2xl p-6 mb-6 flex-row items-center justify-center shadow-md"

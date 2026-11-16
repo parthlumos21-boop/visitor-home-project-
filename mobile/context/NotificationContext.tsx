@@ -4,8 +4,9 @@ import io, { Socket } from 'socket.io-client';
 import Toast from 'react-native-toast-message';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
+import { isRunningInExpoGo } from 'expo';
 
-const isExpoGo = Constants.appOwnership === 'expo';
+const isExpoGo = isRunningInExpoGo() || Constants.appOwnership === 'expo' || (Constants as any).executionEnvironment === 'storeClient';
 const canUseExpoNotifications = Platform.OS !== 'web' && !isExpoGo;
 
 let useLastNotificationResponse: any = () => null;
@@ -16,7 +17,7 @@ if (canUseExpoNotifications) {
   } catch (e) {}
 }
 
-// Configure foreground notification behavior for dev/production builds and Expo Go local notifications.
+// Configure foreground notification behavior for dev/production builds
 if (canUseExpoNotifications) {
   import('expo-notifications').then((Notifications) => {
     Notifications.setNotificationHandler({
@@ -31,10 +32,10 @@ if (canUseExpoNotifications) {
     if (Platform.OS === 'android') {
       Notifications.setNotificationChannelAsync('max', {
         name: 'max',
-        importance: Notifications.AndroidImportance.MAX,
+        importance: Notifications.AndroidImportance?.MAX ?? 5,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility?.PUBLIC ?? 1,
         sound: 'default',
       }).then(() => {
         console.log('✅ [NotificationContext] Verified channel [max] is active for status bar drops!');

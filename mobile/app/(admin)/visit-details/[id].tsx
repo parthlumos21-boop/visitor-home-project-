@@ -95,7 +95,7 @@ export default function AdminVisitDetails() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-gray-50 items-center justify-center">
+      <View className="flex-1 bg-[#F5F5F5] items-center justify-center">
         <ActivityIndicator size="large" color="#2563eb" />
       </View>
     );
@@ -103,7 +103,7 @@ export default function AdminVisitDetails() {
 
   if (!visit) {
     return (
-      <View className="flex-1 bg-gray-50">
+      <View className="flex-1 bg-[#F5F5F5]">
         <View className="bg-white px-4 border-b border-gray-100" style={{ paddingTop: Math.max(insets.top, 16) + 8, paddingBottom: 12 }}>
           <View className="flex-row items-center">
             <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
@@ -122,7 +122,7 @@ export default function AdminVisitDetails() {
   const qrValue = visit.qrCode?.token || visit.displayId || visit.id;
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-[#F5F5F5]">
       <View className="bg-white px-4 border-b border-gray-100" style={{ paddingTop: Math.max(insets.top, 16) + 8, paddingBottom: 12 }}>
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
